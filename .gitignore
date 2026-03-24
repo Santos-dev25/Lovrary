@@ -1,17 +1,23 @@
-# Ambientes Virtuais (Arquivos pesados do Python)
+# --- BACKEND (Python) ---
 backend/venv/
 backend/__pycache__/
 *.pyc
 
-# Segurança (NUNCA deve subir para o GitHub)
+# --- FRONTEND (React/Vite) ---
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+*.local
+
+# --- SEGURANÇA (Obrigatório) ---
 .env
 backend/.env
 frontend/.env
 
-# Node / React (Arquivos que o NPM baixa sozinho)
-frontend/node_modules/
-frontend/dist/
-
-# Arquivos inúteis do sistema
+# --- LOGS E EDITORES ---
+npm-debug.log*
+yarn-error.log*
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
