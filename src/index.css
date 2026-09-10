@@ -1,0 +1,194 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Warm literary paper & marsala palette (Light Mode) */
+    --background: 30 25% 96%;
+    --foreground: 350 30% 15%;
+
+    --card: 30 22% 99%;
+    --card-foreground: 350 30% 15%;
+
+    --popover: 30 22% 99%;
+    --popover-foreground: 350 30% 15%;
+
+    --primary: 348 52% 30%;
+    --primary-foreground: 30 25% 96%;
+
+    --secondary: 30 18% 91%;
+    --secondary-foreground: 350 30% 15%;
+
+    --muted: 30 14% 92%;
+    --muted-foreground: 350 10% 48%;
+
+    --accent: 348 40% 40%;
+    --accent-foreground: 30 25% 96%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 30 16% 87%;
+    --input: 30 16% 87%;
+    --ring: 348 52% 30%;
+
+    --radius: 0.85rem;
+
+    --sidebar-background: 30 24% 98%;
+    --sidebar-foreground: 350 30% 15%;
+    --sidebar-primary: 348 52% 30%;
+    --sidebar-primary-foreground: 30 25% 96%;
+    --sidebar-accent: 30 16% 92%;
+    --sidebar-accent-foreground: 350 30% 15%;
+    --sidebar-border: 30 16% 88%;
+    --sidebar-ring: 348 52% 30%;
+
+    /* Brand tokens */
+    --marsala: 348 52% 30%;
+    --marsala-light: 348 42% 46%;
+    --marsala-dark: 348 56% 22%;
+    --cream: 30 25% 96%;
+    --cream-dark: 30 16% 90%;
+    --warm-gray: 30 8% 58%;
+    --gold: 38 72% 52%;
+    --gold-light: 38 60% 75%;
+
+    --gradient-marsala: linear-gradient(135deg, hsl(348 52% 30%), hsl(348 42% 44%));
+    --shadow-card: 0 2px 14px -3px hsl(348 52% 20% / 0.07), 0 1px 3px 0 hsl(348 52% 20% / 0.04);
+    --shadow-card-hover: 0 12px 28px -6px hsl(348 52% 20% / 0.14), 0 4px 10px -2px hsl(348 52% 20% / 0.06);
+  }
+
+  .dark {
+    /* Warm Mahogany / Library Study palette (Dark Mode) */
+    --background: 350 16% 7%;
+    --foreground: 30 25% 93%;
+
+    --card: 350 14% 11%;
+    --card-foreground: 30 25% 93%;
+
+    --popover: 350 14% 11%;
+    --popover-foreground: 30 25% 93%;
+
+    --primary: 348 60% 62%;
+    --primary-foreground: 350 20% 8%;
+
+    --secondary: 350 12% 16%;
+    --secondary-foreground: 30 20% 90%;
+
+    --muted: 350 10% 17%;
+    --muted-foreground: 30 12% 62%;
+
+    --accent: 348 48% 55%;
+    --accent-foreground: 30 25% 95%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 350 12% 18%;
+    --input: 350 12% 18%;
+    --ring: 348 60% 62%;
+
+    --sidebar-background: 350 18% 9%;
+    --sidebar-foreground: 30 25% 93%;
+    --sidebar-primary: 348 60% 62%;
+    --sidebar-primary-foreground: 350 20% 8%;
+    --sidebar-accent: 350 14% 15%;
+    --sidebar-accent-foreground: 30 25% 95%;
+    --sidebar-border: 350 12% 17%;
+    --sidebar-ring: 348 60% 62%;
+
+    --marsala: 348 60% 62%;
+    --marsala-light: 348 55% 70%;
+    --marsala-dark: 348 55% 42%;
+    --cream: 30 15% 85%;
+    --cream-dark: 350 12% 15%;
+    --warm-gray: 30 8% 60%;
+    --gold: 38 78% 62%;
+    --gold-light: 38 60% 50%;
+
+    --gradient-marsala: linear-gradient(135deg, hsl(348 55% 52%), hsl(348 48% 62%));
+    --shadow-card: 0 4px 20px -4px hsl(0 0% 0% / 0.5);
+    --shadow-card-hover: 0 12px 32px -6px hsl(348 50% 50% / 0.22);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased selection:bg-marsala/20 selection:text-foreground;
+    font-feature-settings: "ss01", "cv11";
+    letter-spacing: -0.005em;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display text-foreground;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+  }
+}
+
+@layer utilities {
+  .text-marsala {
+    color: hsl(var(--marsala));
+  }
+  .bg-marsala {
+    background-color: hsl(var(--marsala));
+  }
+  .bg-marsala-light {
+    background-color: hsl(var(--marsala-light));
+  }
+  .border-marsala {
+    border-color: hsl(var(--marsala));
+  }
+  .text-warm-gray {
+    color: hsl(var(--warm-gray));
+  }
+  .bg-cream-dark {
+    background-color: hsl(var(--cream-dark));
+  }
+  .text-gold {
+    color: hsl(var(--gold));
+  }
+  .bg-gold-light {
+    background-color: hsl(var(--gold-light));
+  }
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  .shadow-card-hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+  .gradient-marsala {
+    background: var(--gradient-marsala);
+  }
+  .font-numeric {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum", "cv11";
+    letter-spacing: -0.02em;
+    font-weight: 600;
+  }
+
+  /* Book spine bevel effect for physical aesthetic */
+  .book-spine-effect {
+    position: relative;
+  }
+  .book-spine-effect::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 6px;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.25) 0%, rgba(255, 255, 255, 0.15) 50%, transparent 100%);
+    pointer-events: none;
+    z-index: 5;
+  }
+}
