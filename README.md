@@ -108,6 +108,14 @@ npm run build
 
 ---
 
+## 🤖 AI-Assisted Development & Refatoração
+
+Este projeto foi construído adotando fluxos modernos de desenvolvimento assistido por IA, focando na orquestração inteligente entre geração de código e engenharia de software rigorosa:
+
+* **Ideação e Prototipagem:** A estrutura base inicial e o rascunho dos componentes visuais foram gerados utilizando a plataforma Lovable, atuando como um acelerador de setup.
+* **Auditoria Contínua:** Com o auxílio de agentes especializados em UI/UX e código (via UpGraphic), o projeto passou por uma revisão profunda de interface e usabilidade.
+* **Autoria e Hardening:** Todo o tratamento de segurança (migração para variáveis de ambiente, proteção contra XSS), a implementação da tolerância a falhas (Modo Offline/Demonstração) e o refinamento editorial da interface foram estruturados e revisados manualmente. O resultado é um código limpo, autoral, sem dependências geradas artificialmente e pronto para escalar.
+
 ## 📄 Licença e Autoria
 
 © 2026 Cauã Dos Santos Nascimento.
