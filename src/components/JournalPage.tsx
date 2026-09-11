@@ -180,7 +180,7 @@ const JournalPage = () => {
                             },
                           });
                         }}
-                        className="ml-auto text-muted-foreground hover:text-destructive transition-colors p-1 rounded-md"
+                        className="ml-auto text-muted-foreground hover:text-destructive hover:bg-destructive/10 min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center transition-colors p-1.5 rounded-lg"
                         aria-label="Excluir reação"
                         title="Excluir reação"
                       >

@@ -97,7 +97,7 @@ const Sidebar = ({
           )}
           <button
             onClick={onMobileClose}
-            className="ml-auto md:hidden p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
+            className="ml-auto md:hidden min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Fechar menu"
           >
             <X className="w-5 h-5" />

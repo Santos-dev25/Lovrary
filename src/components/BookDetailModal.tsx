@@ -241,7 +241,7 @@ export const BookDetailModal = () => {
           {/* Close button - desktop & mobile pinned top-right */}
           <button
             onClick={() => setSelectedBook(null)}
-            className="absolute top-4 right-4 z-30 p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
+            className="absolute top-3 sm:top-4 right-3 sm:right-4 z-30 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-2xl text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
             aria-label="Fechar modal de detalhes"
           >
             <X className="w-5 h-5" />
@@ -317,27 +317,29 @@ export const BookDetailModal = () => {
               {/* 2. Star Rating Bar */}
               <div className="space-y-1 w-full flex flex-col items-center">
                 <div className="flex items-center gap-1.5 py-1 px-3 rounded-full bg-card border border-border shadow-2xs">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        setRating(book.id, i + 1);
-                        toast.success(`Nota atualizada para ${i + 1} estrelas! ⭐`);
-                      }}
-                      className="p-0.5 hover:scale-115 transition-transform"
-                      title={`Avaliar ${i + 1} estrelas`}
-                      aria-label={`Avaliar ${i + 1} estrelas`}
-                    >
-                      <Star
-                        className={`w-4 h-4 transition-colors ${
-                          i < book.rating ? "fill-gold text-gold" : "text-muted-foreground/30 hover:text-gold/60"
-                        }`}
-                      />
-                    </button>
-                  ))}
-                  <span className="text-xs font-numeric font-bold text-foreground ml-1">
-                    {book.rating ? `${book.rating}.0` : "—"}
-                  </span>
+                  <div className="flex items-center gap-0.5 sm:gap-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          setRating(book.id, i + 1);
+                          toast.success(`Nota atualizada para ${i + 1} estrelas! ⭐`);
+                        }}
+                        className="min-w-[40px] min-h-[40px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center p-1 hover:scale-115 active:scale-95 transition-transform touch-manipulation"
+                        title={`Avaliar ${i + 1} estrelas`}
+                        aria-label={`Avaliar ${i + 1} estrelas`}
+                      >
+                        <Star
+                          className={`w-4 h-4 sm:w-4.5 sm:h-4.5 transition-colors ${
+                            i < book.rating ? "fill-gold text-gold" : "text-muted-foreground/30 hover:text-gold/60"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                    <span className="text-xs font-numeric font-bold text-foreground ml-1">
+                      {book.rating ? `${book.rating}.0` : "—"}
+                    </span>
+                  </div>
                 </div>
                 <span className="text-[11px] text-muted-foreground">Avaliação pessoal</span>
               </div>
@@ -728,7 +730,7 @@ export const BookDetailModal = () => {
                                     },
                                   });
                                 }}
-                                className="opacity-60 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all shrink-0"
+                                className="opacity-70 group-hover:opacity-100 min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all shrink-0"
                                 title="Excluir anotação"
                                 aria-label="Excluir anotação"
                               >
@@ -847,7 +849,13 @@ export const BookDetailModal = () => {
                           />
                           <div className="flex items-center gap-1 justify-center">
                             {Array.from({ length: 5 }).map((_, i) => (
-                              <button key={i} type="button" onClick={() => setNewSubRating(i + 1)}>
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => setNewSubRating(i + 1)}
+                                className="min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center p-1 rounded-lg hover:bg-secondary/60 transition-colors touch-manipulation"
+                                title={`Nota ${i + 1}`}
+                              >
                                 <Star className={`w-4 h-4 ${i < newSubRating ? "fill-gold text-gold" : "text-muted-foreground/30"}`} />
                               </button>
                             ))}
@@ -885,6 +893,7 @@ export const BookDetailModal = () => {
                                   key={i}
                                   onClick={() => setSubRating(book.id, sub.label, i + 1)}
                                   title={`Nota ${i + 1}`}
+                                  className="min-w-[32px] min-h-[32px] sm:min-w-[28px] sm:min-h-[28px] flex items-center justify-center p-1 hover:scale-110 active:scale-95 transition-transform touch-manipulation"
                                 >
                                   <Star
                                     className={`w-3.5 h-3.5 transition-colors ${
@@ -899,10 +908,11 @@ export const BookDetailModal = () => {
                                     subRatings: (book.subRatings || []).filter((sr) => sr.label !== sub.label),
                                   })
                                 }
-                                className="ml-1 p-1 text-muted-foreground hover:text-destructive rounded-md"
+                                className="ml-1 min-w-[36px] min-h-[36px] flex items-center justify-center p-1.5 text-muted-foreground hover:text-destructive rounded-lg transition-colors"
                                 title="Remover critério"
+                                aria-label="Remover critério"
                               >
-                                <Trash2 className="w-3 h-3" />
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </div>
@@ -991,7 +1001,7 @@ export const BookDetailModal = () => {
                                     },
                                   });
                                 }}
-                                className="opacity-60 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all shrink-0"
+                                className="opacity-70 group-hover:opacity-100 min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all shrink-0"
                                 title="Remover citação"
                                 aria-label="Remover citação"
                               >
@@ -1122,8 +1132,9 @@ export const BookDetailModal = () => {
                             <span>{vibe}</span>
                             <button
                               onClick={() => removeVibe(book.id, vibe)}
-                              className="opacity-70 hover:opacity-100 hover:bg-black/20 rounded-full p-0.5"
+                              className="opacity-80 hover:opacity-100 hover:bg-black/20 rounded-full min-w-[26px] min-h-[26px] flex items-center justify-center -mr-1 p-1 transition-all"
                               title="Remover tag"
+                              aria-label={`Remover tag ${vibe}`}
                             >
                               <X className="w-3 h-3" />
                             </button>

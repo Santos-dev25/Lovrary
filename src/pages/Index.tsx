@@ -170,7 +170,7 @@ const Index = () => {
               {search && (
                 <button
                   onClick={() => setSearch("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded-lg"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-xl transition-colors"
                   aria-label="Limpar busca"
                 >
                   <X className="w-4 h-4" />
@@ -233,10 +233,10 @@ const Index = () => {
                       setSearch("");
                       setSortBy("recent");
                     }}
-                    className="flex items-center gap-1 text-xs text-marsala hover:text-marsala-light font-semibold px-2 py-1 rounded-lg hover:bg-secondary transition-colors"
+                    className="flex items-center gap-1.5 text-xs text-marsala hover:text-marsala-light font-semibold min-h-[36px] px-3 py-1.5 rounded-xl hover:bg-secondary transition-colors"
                     title="Restaurar todos os filtros"
                   >
-                    <RotateCcw className="w-3 h-3" />
+                    <RotateCcw className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Limpar</span>
                   </button>
                 )}
@@ -304,7 +304,7 @@ const Index = () => {
       <header className="md:hidden sticky top-0 z-30 flex items-center justify-between gap-3 px-4 h-14 bg-card/90 backdrop-blur border-b border-border">
         <button
           onClick={() => setMobileOpen(true)}
-          className="p-2 -ml-2 rounded-lg hover:bg-secondary"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 rounded-xl hover:bg-secondary transition-colors"
           aria-label="Abrir menu"
         >
           <Menu className="w-5 h-5 text-foreground" />
