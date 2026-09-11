@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
-import WelcomeBanner from "@/components/WelcomeBanner";
-import NextReadingBanner from "@/components/NextReadingBanner";
+import ImmersiveReadingHero from "@/components/ImmersiveReadingHero";
+import ReaderSkillsSection from "@/components/ReaderSkillsSection";
 import StatsPanel from "@/components/StatsPanel";
 import ReadingNow from "@/components/ReadingNow";
 import BookCard from "@/components/BookCard";
@@ -70,8 +70,14 @@ const Index = () => {
     if (activeTab === "dashboard") {
       return (
         <div className="space-y-6 sm:space-y-8 animate-fade-in">
-          <WelcomeBanner />
-          <NextReadingBanner onStartReading={() => setActiveTab("lendo")} />
+          <ImmersiveReadingHero
+            onOpenJournal={() => setActiveTab("journal")}
+            onExploreAcervo={() => setActiveTab("acervo")}
+          />
+          <ReaderSkillsSection
+            compact
+            onExploreFull={() => setActiveTab("skills")}
+          />
           <StatsPanel />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
             <ReadingNow />
@@ -93,6 +99,14 @@ const Index = () => {
       return (
         <div className="space-y-6 animate-fade-in">
           <ReadingNow fullView />
+        </div>
+      );
+    }
+
+    if (activeTab === "skills") {
+      return (
+        <div className="space-y-6 animate-fade-in">
+          <ReaderSkillsSection />
         </div>
       );
     }

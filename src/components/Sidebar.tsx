@@ -25,6 +25,7 @@ const navItems = [
   { id: "acervo", label: "Meu Acervo", icon: Library },
   { id: "lendo", label: "Lendo Agora", icon: BookOpen },
   { id: "journal", label: "Journal", icon: NotebookPen },
+  { id: "skills", label: "Maestria & Skills", icon: Sparkles },
   { id: "wishlist", label: "Lista de Desejos", icon: Heart },
   { id: "fila", label: "Próxima Leitura", icon: Bookmark },
   { id: "stats", label: "Estatísticas", icon: BarChart3 },

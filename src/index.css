@@ -191,4 +191,8 @@
     pointer-events: none;
     z-index: 5;
   }
+
+  .clip-path-ribbon {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 8px), 0 100%);
+  }
 }
