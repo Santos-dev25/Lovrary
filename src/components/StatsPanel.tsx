@@ -1,5 +1,5 @@
 import { useBooks } from "@/context/BooksContext";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from "recharts";
 import { BookOpen, TrendingUp, Award, Target, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -124,17 +124,18 @@ const StatsPanel = () => {
 
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={monthlyStats} barSize={24}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" vertical={false} />
               <XAxis
                 dataKey="month"
-                tick={{ fontSize: 11 }}
-                stroke="hsl(var(--muted-foreground))"
+                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                stroke="hsl(var(--border))"
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
                 allowDecimals={false}
-                tick={{ fontSize: 11 }}
-                stroke="hsl(var(--muted-foreground))"
+                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                stroke="hsl(var(--border))"
                 axisLine={false}
                 tickLine={false}
                 width={24}
@@ -149,7 +150,8 @@ const StatsPanel = () => {
                   color: "hsl(var(--foreground))",
                   boxShadow: "var(--shadow-card)",
                 }}
-                labelStyle={{ fontWeight: 600 }}
+                labelStyle={{ fontWeight: 600, color: "hsl(var(--foreground))" }}
+                itemStyle={{ color: "hsl(var(--marsala))" }}
                 formatter={(value: number) => [`${value} livro(s)`, "Lidos"]}
               />
               <Bar dataKey="count" radius={[6, 6, 0, 0]}>

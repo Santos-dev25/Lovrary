@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useBooks } from "@/context/BooksContext";
 import { categories } from "@/data/mockBooks";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from "recharts";
 import { BookOpen, TrendingUp, Award, Target, Filter } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -129,19 +129,39 @@ const StatsPage = () => {
         </h3>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={monthlyStats} barSize={28}>
-            <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-            <YAxis allowDecimals={false} tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.5)" vertical={false} />
+            <XAxis
+              dataKey="month"
+              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+              stroke="hsl(var(--border))"
+              axisLine={{ stroke: "hsl(var(--border))" }}
+              tickLine={false}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+              stroke="hsl(var(--border))"
+              axisLine={{ stroke: "hsl(var(--border))" }}
+              tickLine={false}
+              width={26}
+            />
             <Tooltip
+              cursor={{ fill: "hsl(var(--secondary) / 0.4)" }}
               contentStyle={{
                 backgroundColor: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "8px",
+                borderColor: "hsl(var(--border))",
+                borderRadius: "12px",
                 fontSize: "12px",
+                color: "hsl(var(--foreground))",
+                boxShadow: "var(--shadow-card)",
               }}
+              labelStyle={{ fontWeight: 600, color: "hsl(var(--foreground))" }}
+              itemStyle={{ color: "hsl(var(--marsala))" }}
+              formatter={(value: number) => [`${value} livro(s)`, "Lidos"]}
             />
             <Bar dataKey="count" radius={[6, 6, 0, 0]}>
               {monthlyStats.map((entry, index) => (
-                <Cell key={index} fill={entry.count > 0 ? "hsl(var(--marsala))" : "hsl(var(--muted))"} />
+                <Cell key={index} fill={entry.count > 0 ? "hsl(var(--marsala))" : "hsl(var(--secondary))"} />
               ))}
             </Bar>
           </BarChart>

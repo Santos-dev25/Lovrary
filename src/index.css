@@ -23,16 +23,16 @@
     --secondary-foreground: 350 30% 15%;
 
     --muted: 30 14% 92%;
-    --muted-foreground: 350 10% 48%;
+    --muted-foreground: 350 12% 38%;
 
     --accent: 348 40% 40%;
     --accent-foreground: 30 25% 96%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 76% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 30 16% 87%;
-    --input: 30 16% 87%;
+    --border: 30 16% 86%;
+    --input: 30 16% 86%;
     --ring: 348 52% 30%;
 
     --radius: 0.85rem;
@@ -46,14 +46,14 @@
     --sidebar-border: 30 16% 88%;
     --sidebar-ring: 348 52% 30%;
 
-    /* Brand tokens */
+    /* Brand tokens - Calibrated for WCAG AA/AAA */
     --marsala: 348 52% 30%;
     --marsala-light: 348 42% 46%;
     --marsala-dark: 348 56% 22%;
     --cream: 30 25% 96%;
     --cream-dark: 30 16% 90%;
     --warm-gray: 30 8% 58%;
-    --gold: 38 72% 52%;
+    --gold: 35 86% 33%;
     --gold-light: 38 60% 75%;
 
     --gradient-marsala: linear-gradient(135deg, hsl(348 52% 30%), hsl(348 42% 44%));
@@ -79,7 +79,7 @@
     --secondary-foreground: 30 20% 90%;
 
     --muted: 350 10% 17%;
-    --muted-foreground: 30 12% 62%;
+    --muted-foreground: 30 16% 70%;
 
     --accent: 348 48% 55%;
     --accent-foreground: 30 25% 95%;
@@ -87,8 +87,8 @@
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 350 12% 18%;
-    --input: 350 12% 18%;
+    --border: 350 12% 19%;
+    --input: 350 12% 19%;
     --ring: 348 60% 62%;
 
     --sidebar-background: 350 18% 9%;
@@ -106,10 +106,10 @@
     --cream: 30 15% 85%;
     --cream-dark: 350 12% 15%;
     --warm-gray: 30 8% 60%;
-    --gold: 38 78% 62%;
+    --gold: 38 90% 67%;
     --gold-light: 38 60% 50%;
 
-    --gradient-marsala: linear-gradient(135deg, hsl(348 55% 52%), hsl(348 48% 62%));
+    --gradient-marsala: linear-gradient(135deg, hsl(348 58% 42%), hsl(348 50% 54%));
     --shadow-card: 0 4px 20px -4px hsl(0 0% 0% / 0.5);
     --shadow-card-hover: 0 12px 32px -6px hsl(348 50% 50% / 0.22);
   }
@@ -194,5 +194,15 @@
 
   .clip-path-ribbon {
     clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 8px), 0 100%);
+  }
+
+  /* Notebook journal paper styling */
+  .notebook-ruled {
+    background-image: repeating-linear-gradient(
+      transparent,
+      transparent 27px,
+      hsl(var(--border) / 0.4) 28px
+    );
+    line-height: 28px;
   }
 }
