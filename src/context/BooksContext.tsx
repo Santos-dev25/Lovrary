@@ -459,7 +459,6 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
       if (isGuest || userId === "guest") persistGuestBooks(next);
       return next;
     });
-    toast.success("Anotação apagada!");
   }, [isGuest, userId]);
 
   const moveToAcervo = useCallback((bookId: string) => {

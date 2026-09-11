@@ -717,8 +717,16 @@ export const BookDetailModal = () => {
 
                               <button
                                 onClick={() => {
+                                  const noteToDelete = note;
                                   deleteNote(book.id, note.id);
-                                  toast.success("Anotação removida do diário.");
+                                  toast.success("Anotação removida do diário.", {
+                                    action: {
+                                      label: "Desfazer",
+                                      onClick: () => {
+                                        addNote(book.id, noteToDelete);
+                                      },
+                                    },
+                                  });
                                 }}
                                 className="opacity-60 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all shrink-0"
                                 title="Excluir anotação"
@@ -972,8 +980,16 @@ export const BookDetailModal = () => {
 
                               <button
                                 onClick={() => {
+                                  const quoteToDelete = q;
                                   removeQuote(book.id, i);
-                                  toast.success("Citação removida.");
+                                  toast.success("Citação removida.", {
+                                    action: {
+                                      label: "Desfazer",
+                                      onClick: () => {
+                                        addQuote(book.id, quoteToDelete);
+                                      },
+                                    },
+                                  });
                                 }}
                                 className="opacity-60 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all shrink-0"
                                 title="Remover citação"

@@ -65,7 +65,7 @@ const StatsPage = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h2 className="text-2xl font-display font-bold text-foreground">Estatísticas</h2>
+        <h2 className="text-2xl font-display font-bold text-foreground">Registros de Leitura</h2>
         {availableYears.length > 1 && (
           <div className="flex items-center gap-1 bg-secondary p-1 rounded-xl">
             {availableYears.map((yr) => (

@@ -21,17 +21,17 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "dashboard", label: "Início", icon: LayoutDashboard },
   { id: "acervo", label: "Meu Acervo", icon: Library },
   { id: "lendo", label: "Lendo Agora", icon: BookOpen },
   { id: "journal", label: "Journal", icon: NotebookPen },
   { id: "skills", label: "Maestria & Skills", icon: Sparkles },
   { id: "wishlist", label: "Lista de Desejos", icon: Heart },
   { id: "fila", label: "Próxima Leitura", icon: Bookmark },
-  { id: "stats", label: "Estatísticas", icon: BarChart3 },
+  { id: "stats", label: "Registros de Leitura", icon: BarChart3 },
   { id: "metas", label: "Metas", icon: Target },
   { id: "resenhas", label: "Resenhas", icon: Star },
-  { id: "exportar", label: "Exportar", icon: Download },
+  { id: "exportar", label: "Preservar Acervo", icon: Download },
 ];
 
 const Sidebar = ({

@@ -57,8 +57,8 @@ const ExportPage = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <h2 className="text-2xl font-display font-bold text-foreground">Exportar Resenhas</h2>
-      <p className="text-sm text-muted-foreground">Gere um card visual ou copie o texto da resenha para compartilhar.</p>
+      <h2 className="text-2xl font-display font-bold text-foreground">Preservar & Compartilhar Acervo</h2>
+      <p className="text-sm text-muted-foreground">Gere um card visual memorável ou copie o texto da resenha e diário para compartilhar.</p>
 
       {/* Book selector */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">

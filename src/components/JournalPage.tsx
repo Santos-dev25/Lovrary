@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useBooks } from "@/context/BooksContext";
 import { BookOpen, Bookmark, Plus, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 const JournalPage = () => {
   const { books, addNote, deleteNote, updateProgress, setSelectedBook } = useBooks();
@@ -167,11 +168,23 @@ const JournalPage = () => {
                         {note.date} às {note.time}
                       </span>
                       <button
-                        onClick={() => deleteNote(activeBook.id, note.id)}
-                        className="ml-auto text-muted-foreground hover:text-destructive transition-colors"
+                        onClick={() => {
+                          const noteToDelete = note;
+                          deleteNote(activeBook.id, note.id);
+                          toast.success("Anotação removida do diário.", {
+                            action: {
+                              label: "Desfazer",
+                              onClick: () => {
+                                addNote(activeBook.id, noteToDelete);
+                              },
+                            },
+                          });
+                        }}
+                        className="ml-auto text-muted-foreground hover:text-destructive transition-colors p-1 rounded-md"
                         aria-label="Excluir reação"
+                        title="Excluir reação"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                     <p className="text-xs text-foreground leading-relaxed">{note.text}</p>

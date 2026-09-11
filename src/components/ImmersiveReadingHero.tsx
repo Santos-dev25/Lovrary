@@ -4,6 +4,7 @@ import {
   BookOpen, Sparkles, ArrowRight, Bookmark, Check, Plus, Feather, Flame
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 interface ImmersiveReadingHeroProps {
   onOpenJournal?: () => void;
@@ -20,6 +21,7 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
 
   const [pageInput, setPageInput] = useState("");
   const [isEditingPage, setIsEditingPage] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
 
   // Saudação poética conforme o horário local
   const getGreeting = () => {
@@ -35,9 +37,16 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
     if (!activeBook) return;
     const page = parseInt(pageInput);
     if (!isNaN(page) && page >= 0) {
-      updateProgress(activeBook.id, Math.min(page, activeBook.totalPages || page));
+      const maxP = activeBook.totalPages || page;
+      const targetPage = Math.min(page, maxP);
+      updateProgress(activeBook.id, targetPage);
       setPageInput("");
-      setIsEditingPage(false);
+      setJustSaved(true);
+      toast.success(`Página ${targetPage} registrada! Ritmo atualizado. 📖`);
+      setTimeout(() => {
+        setJustSaved(false);
+        setIsEditingPage(false);
+      }, 850);
     }
   };
 
@@ -205,7 +214,7 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
                 Faltam {Math.max(0, (activeBook.totalPages || 0) - (activeBook.currentPage || 0))} páginas para a conclusão
               </span>
               {isEditingPage ? (
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 animate-fade-in">
                   <input
                     type="number"
                     min={0}
@@ -219,17 +228,22 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
                   />
                   <button
                     onClick={handleSavePage}
-                    className="p-1 rounded-md gradient-marsala text-primary-foreground"
+                    disabled={justSaved}
+                    className={`p-1 rounded-md text-primary-foreground transition-all duration-300 ${
+                      justSaved ? "bg-emerald-600 scale-105" : "gradient-marsala hover:opacity-90"
+                    }`}
                     title="Confirmar"
                   >
-                    <Check className="w-3 h-3" />
+                    <Check className="w-3.5 h-3.5" />
                   </button>
-                  <button
-                    onClick={() => setIsEditingPage(false)}
-                    className="text-[10px] text-muted-foreground hover:text-foreground px-1"
-                  >
-                    Cancelar
-                  </button>
+                  {!justSaved && (
+                    <button
+                      onClick={() => setIsEditingPage(false)}
+                      className="text-[10px] text-muted-foreground hover:text-foreground px-1"
+                    >
+                      Cancelar
+                    </button>
+                  )}
                 </div>
               ) : (
                 <button
