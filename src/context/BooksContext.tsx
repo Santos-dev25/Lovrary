@@ -17,6 +17,7 @@ interface BooksContextType {
   setSelectedBook: (book: Book | null) => void;
   updateBook: (id: string, updates: Partial<Book>) => void;
   addNote: (bookId: string, note: BookNote) => void;
+  updateNote: (bookId: string, noteId: string, updates: { text: string; chapter?: string }) => Promise<void>;
   deleteNote: (bookId: string, noteId?: string) => Promise<void>;
   moveToAcervo: (bookId: string) => void;
   startReading: (bookId: string) => void;
@@ -482,6 +483,51 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [isGuest, userId]);
 
+  const updateNote = useCallback(async (bookId: string, noteId: string, updates: { text: string; chapter?: string }) => {
+    if (!noteId) return;
+
+    const safeText = String(updates.text || "").trim().slice(0, 2000);
+    const safeChapter = updates.chapter ? String(updates.chapter).trim().slice(0, 100) : "";
+
+    if (!isGuest && userId && userId !== "guest") {
+      const { error } = await supabase
+        .from("journal_notes")
+        .update({
+          reaction: safeText,
+          chapter: safeChapter || null,
+        })
+        .eq("id", noteId)
+        .eq("user_id", userId);
+
+      if (error) {
+        console.error(error);
+        toast.error("Erro ao atualizar anotação");
+        return;
+      }
+    }
+
+    setBooks(prev => {
+      const next = prev.map(b => {
+        if (b.id !== bookId) return b;
+        return {
+          ...b,
+          notes: (b.notes || []).map(n => {
+            if (n.id !== noteId) return n;
+            return {
+              ...n,
+              text: safeText,
+              chapter: safeChapter || n.chapter,
+            };
+          }),
+        };
+      });
+      if (isGuest || userId === "guest") persistGuestBooks(next);
+      return next;
+    });
+
+    toast.success("Anotação atualizada! ✍️");
+  }, [isGuest, userId]);
+
   const moveToAcervo = useCallback((bookId: string) => {
     updateBook(bookId, { ownership: "tenho", status: "nao-lido" });
     setReadingQueue(prev => prev.filter(id => id !== bookId));
@@ -604,7 +650,7 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     <BooksContext.Provider value={{
       books, loading, isGuest, loginAsGuest, logoutGuest, addBook, readingQueue,
       readingGoal: readingGoalState, selectedBook, setSelectedBook, updateBook,
-      addNote, deleteNote, moveToAcervo, startReading, finishReading, updateProgress,
+      addNote, updateNote, deleteNote, moveToAcervo, startReading, finishReading, updateProgress,
       addToQueue, removeFromQueue, reorderQueue, setGoalTarget, addReview, addQuote,
       removeQuote, setRating, setSubRating, addVibe, removeVibe, deleteBook,
     }}>

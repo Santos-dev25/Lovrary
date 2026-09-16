@@ -87,7 +87,7 @@ const Sidebar = ({
           <LovraryLogo size={34} />
           {(!collapsed || mobileOpen) && (
             <div className="flex items-center gap-2 min-w-0">
-              <span className="font-display text-xl font-bold text-marsala tracking-tight">lovrary</span>
+              <span className="font-display text-xl font-bold text-marsala tracking-tight">Lovrary</span>
               {isGuest && (
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gold/15 text-gold border border-gold/30">
                   Demo

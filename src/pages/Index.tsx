@@ -311,7 +311,7 @@ const Index = () => {
         </button>
         <div className="flex items-center gap-2">
           <LovraryLogo size={26} />
-          <span className="font-display text-lg font-bold text-marsala tracking-tight">lovrary</span>
+          <span className="font-display text-lg font-bold text-marsala tracking-tight">Lovrary</span>
         </div>
         <div className="w-9" />
       </header>

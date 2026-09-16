@@ -97,8 +97,7 @@ const Auth = () => {
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <LovraryLogo size={56} className="mb-3" />
-          <h1 className="font-display text-3xl font-bold text-marsala tracking-tight">lovrary</h1>
-          <p className="text-sm text-muted-foreground mt-1">Sua biblioteca e diário pessoal de leituras</p>
+          <h1 className="font-display text-3xl font-bold text-marsala tracking-tight">Lovrary</h1>
         </div>
 
         <div className="bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-card">

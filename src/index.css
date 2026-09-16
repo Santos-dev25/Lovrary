@@ -6,6 +6,7 @@
 
 @layer base {
   :root {
+    color-scheme: light;
     /* Warm literary paper & marsala palette (Light Mode) */
     --background: 30 25% 96%;
     --foreground: 350 30% 15%;
@@ -62,6 +63,7 @@
   }
 
   .dark {
+    color-scheme: dark;
     /* Warm Mahogany / Library Study palette (Dark Mode) */
     --background: 350 16% 7%;
     --foreground: 30 25% 93%;
@@ -144,9 +146,65 @@
       scroll-behavior: auto !important;
     }
   }
+
+  /* Scrollbars Universais e Consistentes (Elimina Background Branco no Dark Mode) */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border) / 0.8);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.6);
+  }
+
+  .dark ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border) / 0.9);
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.8);
+  }
+
+  /* Suporte Firefox / W3C Standard */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border) / 0.8) transparent;
+  }
+
+  .dark,
+  .dark * {
+    scrollbar-color: hsl(var(--border) / 0.9) transparent;
+  }
 }
 
 @layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
   .text-marsala {
     color: hsl(var(--marsala));
   }

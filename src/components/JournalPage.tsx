@@ -1,17 +1,22 @@
 import { useEffect, useState } from "react";
 import { useBooks } from "@/context/BooksContext";
-import { BookOpen, Bookmark, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Bookmark, Plus, Trash2, Pencil, Check, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
 const JournalPage = () => {
-  const { books, addNote, deleteNote, updateProgress, setSelectedBook } = useBooks();
+  const { books, addNote, updateNote, deleteNote, updateProgress, setSelectedBook } = useBooks();
   const reading = books.filter(b => b.status === "lendo");
 
   const [activeBookId, setActiveBookId] = useState<string>(reading[0]?.id || "");
   const [noteText, setNoteText] = useState("");
   const [noteChapter, setNoteChapter] = useState("");
   const [pageInput, setPageInput] = useState("");
+
+  // Estado de edição de anotação
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
+  const [editingChapter, setEditingChapter] = useState("");
 
   // Garante que sempre há um livro selecionado (corrige o progresso preso em 0%)
   useEffect(() => {
@@ -38,6 +43,15 @@ const JournalPage = () => {
     setNoteChapter("");
   };
 
+  const handleSaveEdit = (noteId: string) => {
+    if (!editingText.trim() || !activeBook) return;
+    updateNote(activeBook.id, noteId, {
+      text: editingText,
+      chapter: editingChapter,
+    });
+    setEditingNoteId(null);
+  };
+
   const handleUpdatePage = () => {
     const page = parseInt(pageInput);
     if (!isNaN(page) && activeBook) {
@@ -61,7 +75,7 @@ const JournalPage = () => {
       <h2 className="text-2xl font-display font-bold text-foreground">Journal de Leitura</h2>
 
       {/* Book selector */}
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
         {reading.map(book => (
           <button
             key={book.id}
@@ -83,73 +97,87 @@ const JournalPage = () => {
 
       {activeBook && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left: Add note + progress */}
+          {/* Left: Quick log */}
           <div className="space-y-4">
-            {/* Progress update */}
-            <div className="bg-card rounded-xl border border-border p-4">
-              <h4 className="text-sm font-semibold text-foreground mb-3">Atualizar Progresso</h4>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="flex-1">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-muted-foreground">Pág. {activeBook.currentPage}/{activeBook.totalPages}</span>
-                    <span className="font-semibold text-marsala">{activeBook.progress}%</span>
+            {/* Active book card */}
+            <div className="bg-card rounded-xl border border-border p-5 shadow-card">
+              <div className="flex gap-4">
+                <img
+                  src={activeBook.cover}
+                  alt={activeBook.title}
+                  className="w-20 h-28 object-cover rounded-lg shadow-sm cursor-pointer"
+                  onClick={() => setSelectedBook(activeBook)}
+                />
+                <div className="flex-1 min-w-0">
+                  <h3 translate="no" className="notranslate font-display font-bold text-foreground">{activeBook.title}</h3>
+                  <p translate="no" className="notranslate text-xs text-muted-foreground">{activeBook.author}</p>
+
+                  <div className="mt-3">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                      <span>Progresso: {activeBook.progress}%</span>
+                      <span>{activeBook.currentPage} / {activeBook.totalPages} págs</span>
+                    </div>
+                    <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full gradient-marsala rounded-full transition-all duration-300"
+                        style={{ width: `${activeBook.progress}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full h-2.5 bg-secondary rounded-full overflow-hidden">
-                    <motion.div
-                      animate={{ width: `${activeBook.progress}%` }}
-                      className="h-full gradient-marsala rounded-full"
+
+                  {/* Quick page update */}
+                  <div className="flex items-center gap-2 mt-3">
+                    <input
+                      type="number"
+                      placeholder="Pág atual"
+                      value={pageInput}
+                      onChange={e => setPageInput(e.target.value)}
+                      className="w-24 text-xs px-2.5 py-1.5 rounded-lg border border-border bg-background text-foreground"
                     />
+                    <button
+                      onClick={handleUpdatePage}
+                      className="text-xs px-3 py-1.5 gradient-marsala text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
+                    >
+                      Atualizar
+                    </button>
                   </div>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  placeholder="Página atual"
-                  value={pageInput}
-                  onChange={e => setPageInput(e.target.value)}
-                  className="flex-1 text-sm px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground"
-                  onKeyDown={e => e.key === "Enter" && handleUpdatePage()}
-                />
-                <button onClick={handleUpdatePage} className="text-sm px-4 py-2 rounded-lg gradient-marsala text-primary-foreground font-medium">
-                  Salvar
-                </button>
-              </div>
             </div>
 
-            {/* Add note */}
-            <div className="bg-card rounded-xl border border-border p-4">
-              <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                <Bookmark className="w-4 h-4 text-gold" /> Nova Reação
-              </h4>
-              <div className="space-y-3">
-                <input
-                  placeholder="Capítulo ou Página (ex: Cap. 12)"
-                  value={noteChapter}
-                  onChange={e => setNoteChapter(e.target.value)}
-                  className="w-full text-sm px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground"
-                />
-                <textarea
-                  placeholder="O que você está sentindo? Registre sua reação..."
-                  value={noteText}
-                  onChange={e => setNoteText(e.target.value)}
-                  className="w-full text-sm px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground min-h-[100px] resize-none"
-                />
-                <button
-                  onClick={handleAddNote}
-                  disabled={!noteText.trim()}
-                  className="w-full text-sm font-medium py-2.5 rounded-lg gradient-marsala text-primary-foreground disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  <Plus className="w-4 h-4" /> Salvar Reação
-                </button>
-              </div>
+            {/* New note form */}
+            <div className="bg-card rounded-xl border border-border p-5 shadow-card space-y-3">
+              <h4 className="text-sm font-semibold text-foreground">Nova Reação / Impressão</h4>
+              <input
+                type="text"
+                placeholder="Capítulo ou página (ex: Cap. 5, Pág. 120)"
+                value={noteChapter}
+                onChange={e => setNoteChapter(e.target.value)}
+                maxLength={100}
+                className="w-full text-xs px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground"
+              />
+              <textarea
+                placeholder="O que você sentiu lendo esse trecho? Teorias, surpresas..."
+                value={noteText}
+                onChange={e => setNoteText(e.target.value)}
+                rows={4}
+                maxLength={2000}
+                className="w-full text-xs px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground resize-none"
+              />
+              <button
+                onClick={handleAddNote}
+                disabled={!noteText.trim()}
+                className="w-full flex items-center justify-center gap-2 text-xs py-2.5 gradient-marsala text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                <Plus className="w-3.5 h-3.5" /> Registrar no Diário
+              </button>
             </div>
           </div>
 
           {/* Right: Notes timeline */}
           <div className="bg-card rounded-xl border border-border p-4">
             <h4 className="text-sm font-semibold text-foreground mb-4">Histórico de Reações</h4>
-            <div className="space-y-3 max-h-[500px] overflow-y-auto">
+            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
               {(activeBook.notes || []).slice().reverse().map((note, i) => (
                 <motion.div
                   key={note.id || i}
@@ -160,34 +188,88 @@ const JournalPage = () => {
                 >
                   <div className="absolute left-[-5px] top-1 w-2 h-2 rounded-full bg-marsala" />
                   <div className="bg-secondary/50 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-semibold text-marsala bg-secondary px-2 py-0.5 rounded-full">
-                        {note.chapter}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {note.date} às {note.time}
-                      </span>
-                      <button
-                        onClick={() => {
-                          const noteToDelete = note;
-                          deleteNote(activeBook.id, note.id);
-                          toast.success("Anotação removida do diário.", {
-                            action: {
-                              label: "Desfazer",
-                              onClick: () => {
-                                addNote(activeBook.id, noteToDelete);
-                              },
-                            },
-                          });
-                        }}
-                        className="ml-auto text-muted-foreground hover:text-destructive hover:bg-destructive/10 min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center transition-colors p-1.5 rounded-lg"
-                        aria-label="Excluir reação"
-                        title="Excluir reação"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <p className="text-xs text-foreground leading-relaxed">{note.text}</p>
+                    {editingNoteId === note.id ? (
+                      /* Formulário de Edição Inline */
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={editingChapter}
+                          onChange={(e) => setEditingChapter(e.target.value)}
+                          maxLength={100}
+                          className="w-full text-xs px-2.5 py-1.5 rounded-md border border-border bg-background text-foreground"
+                          placeholder="Capítulo ou página"
+                        />
+                        <textarea
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          maxLength={2000}
+                          rows={3}
+                          className="w-full text-xs px-2.5 py-1.5 rounded-md border border-border bg-background text-foreground resize-none"
+                          placeholder="Texto da reação"
+                        />
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            onClick={() => setEditingNoteId(null)}
+                            className="text-[11px] px-2.5 py-1 rounded-md border border-border bg-background hover:bg-secondary text-muted-foreground transition-colors flex items-center gap-1"
+                          >
+                            <X className="w-3 h-3" /> Cancelar
+                          </button>
+                          <button
+                            onClick={() => handleSaveEdit(note.id!)}
+                            className="text-[11px] px-2.5 py-1 rounded-md gradient-marsala text-primary-foreground font-medium transition-opacity hover:opacity-90 flex items-center gap-1"
+                          >
+                            <Check className="w-3 h-3" /> Salvar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] font-semibold text-marsala bg-secondary px-2 py-0.5 rounded-full">
+                            {note.chapter}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {note.date} às {note.time}
+                          </span>
+                          <div className="ml-auto flex items-center gap-1">
+                            {note.id && (
+                              <button
+                                onClick={() => {
+                                  setEditingNoteId(note.id!);
+                                  setEditingText(note.text);
+                                  setEditingChapter(note.chapter);
+                                }}
+                                className="text-muted-foreground hover:text-foreground hover:bg-secondary min-w-[32px] min-h-[32px] flex items-center justify-center transition-colors p-1.5 rounded-lg"
+                                aria-label="Editar reação"
+                                title="Editar reação"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                const noteToDelete = note;
+                                deleteNote(activeBook.id, note.id);
+                                toast.success("Anotação removida do diário.", {
+                                  action: {
+                                    label: "Desfazer",
+                                    onClick: () => {
+                                      addNote(activeBook.id, noteToDelete);
+                                    },
+                                  },
+                                });
+                              }}
+                              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 min-w-[32px] min-h-[32px] flex items-center justify-center transition-colors p-1.5 rounded-lg"
+                              aria-label="Excluir reação"
+                              title="Excluir reação"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">{note.text}</p>
+                      </>
+                    )}
                   </div>
                 </motion.div>
               ))}
