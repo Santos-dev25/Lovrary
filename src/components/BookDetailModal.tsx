@@ -54,45 +54,50 @@ export const BookDetailModal = () => {
     const query = bookCategory ? `subject:${bookCategory}` : (bookAuthor || "");
     if (!query) return;
 
-    setRecsLoading(true);
-    searchGoogleBooks(query, 8)
-      .then(({ items }) => {
-        if (cancelled) return;
-        const onlineRecs = (items || [])
-          .map((it) => ({
-            id: it.id,
-            title: it.volumeInfo?.title || "",
-            author: it.volumeInfo?.authors?.join(", ") || "",
-            cover: it.volumeInfo?.imageLinks?.thumbnail || it.volumeInfo?.imageLinks?.smallThumbnail || "",
-          }))
-          .filter((r) => r.cover && r.title && r.title.toLowerCase() !== (bookTitle || "").toLowerCase())
-          .slice(0, 4);
+    const timer = setTimeout(() => {
+      setRecsLoading(true);
+      searchGoogleBooks(query, 8)
+        .then(({ items }) => {
+          if (cancelled) return;
+          const onlineRecs = (items || [])
+            .map((it) => ({
+              id: it.id,
+              title: it.volumeInfo?.title || "",
+              author: it.volumeInfo?.authors?.join(", ") || "",
+              cover: it.volumeInfo?.imageLinks?.thumbnail || it.volumeInfo?.imageLinks?.smallThumbnail || "",
+            }))
+            .filter((r) => r.cover && r.title && r.title.toLowerCase() !== (bookTitle || "").toLowerCase())
+            .slice(0, 4);
 
-        if (onlineRecs.length > 0) {
-          setRecs(onlineRecs);
-        } else {
+          if (onlineRecs.length > 0) {
+            setRecs(onlineRecs);
+          } else {
+            const localRecs = [...books, ...mockBooks]
+              .filter(b => b.title.toLowerCase() !== (bookTitle || "").toLowerCase())
+              .filter(b => (bookCategory && b.category === bookCategory) || (bookAuthor && b.author === bookAuthor))
+              .map(b => ({ id: b.id, title: b.title, author: b.author, cover: b.cover }))
+              .slice(0, 4);
+            setRecs(localRecs);
+          }
+        })
+        .catch(() => {
+          if (cancelled) return;
           const localRecs = [...books, ...mockBooks]
             .filter(b => b.title.toLowerCase() !== (bookTitle || "").toLowerCase())
             .filter(b => (bookCategory && b.category === bookCategory) || (bookAuthor && b.author === bookAuthor))
             .map(b => ({ id: b.id, title: b.title, author: b.author, cover: b.cover }))
             .slice(0, 4);
           setRecs(localRecs);
-        }
-      })
-      .catch(() => {
-        if (cancelled) return;
-        const localRecs = [...books, ...mockBooks]
-          .filter(b => b.title.toLowerCase() !== (bookTitle || "").toLowerCase())
-          .filter(b => (bookCategory && b.category === bookCategory) || (bookAuthor && b.author === bookAuthor))
-          .map(b => ({ id: b.id, title: b.title, author: b.author, cover: b.cover }))
-          .slice(0, 4);
-        setRecs(localRecs);
-      })
-      .finally(() => {
-        if (!cancelled) setRecsLoading(false);
-      });
+        })
+        .finally(() => {
+          if (!cancelled) setRecsLoading(false);
+        });
+    }, 350);
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [bookId, bookCategory, bookAuthor, bookTitle, books]);
 
   // Sync inputs on book change

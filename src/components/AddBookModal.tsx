@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Search, Plus, BookOpen, Star, Loader2, PenLine } from "lucide-react";
 import { useBooks } from "@/context/BooksContext";
 import type { Book } from "@/data/mockBooks";
-import { searchGoogleBooks, type GoogleBookItem } from "@/lib/googleBooks";
+import { searchGoogleBooks, sanitizeCoverUrl, type GoogleBookItem } from "@/lib/googleBooks";
 
 interface AddBookModalProps {
   open: boolean;
@@ -45,7 +45,7 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
   const [manualCover, setManualCover] = useState("");
 
   const searchBooks = async () => {
-    if (!query.trim()) return;
+    if (!query.trim() || loading) return;
     setLoading(true);
     setSearched(true);
     setError("");
@@ -66,24 +66,23 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
 
   const handleAdd = (item: GoogleBookItem, ownership: "tenho" | "pretendo") => {
     const v = item.volumeInfo;
-    const cover =
-      v.imageLinks?.thumbnail?.replace("http://", "https://") ||
-      v.imageLinks?.smallThumbnail?.replace("http://", "https://") ||
-      "";
+    const cover = sanitizeCoverUrl(
+      v.imageLinks?.thumbnail || v.imageLinks?.smallThumbnail || ""
+    );
     const rawCategory = v.categories?.[0] || "Outros";
     const category = categoryMap[rawCategory] || rawCategory;
 
     const newBook: Book = {
       id: "", // será gerado pelo banco
-      title: v.title,
-      author: v.authors?.join(", ") || "Autor desconhecido",
+      title: String(v.title || "").trim().slice(0, 250),
+      author: Array.isArray(v.authors) ? v.authors.join(", ").slice(0, 150) : "Autor desconhecido",
       cover,
       rating: 0,
       category,
       vibes: [],
       ownership,
       status: "nao-lido",
-      totalPages: v.pageCount || 0,
+      totalPages: Math.max(0, Math.min(Number(v.pageCount) || 0, 100000)),
       currentPage: 0,
     };
     addBook(newBook);
@@ -91,17 +90,22 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
 
   const handleManualAdd = (ownership: "tenho" | "pretendo") => {
     if (!manualTitle.trim()) return;
+    const safeTitle = manualTitle.trim().slice(0, 250);
+    const safeAuthor = (manualAuthor.trim() || "Autor desconhecido").slice(0, 150);
+    const safePages = Math.max(0, Math.min(parseInt(manualPages) || 0, 100000));
+    const safeCover = sanitizeCoverUrl(manualCover);
+
     const newBook: Book = {
       id: "", // será gerado pelo banco
-      title: manualTitle.trim(),
-      author: manualAuthor.trim() || "Autor desconhecido",
-      cover: manualCover.trim() || "",
+      title: safeTitle,
+      author: safeAuthor,
+      cover: safeCover,
       rating: 0,
       category: manualCategory,
       vibes: [],
       ownership,
       status: "nao-lido",
-      totalPages: parseInt(manualPages) || 0,
+      totalPages: safePages,
       currentPage: 0,
     };
     addBook(newBook);
@@ -163,6 +167,7 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
                   placeholder="Buscar no Google Books..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  maxLength={120}
                   className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-marsala/30 transition-all"
                   autoFocus
                 />
@@ -275,6 +280,7 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
                   placeholder="Nome do livro"
                   value={manualTitle}
                   onChange={(e) => setManualTitle(e.target.value)}
+                  maxLength={250}
                   className="w-full px-3 py-2.5 bg-card border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-marsala/30"
                   autoFocus
                 />
@@ -286,6 +292,7 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
                   placeholder="Nome do autor"
                   value={manualAuthor}
                   onChange={(e) => setManualAuthor(e.target.value)}
+                  maxLength={150}
                   className="w-full px-3 py-2.5 bg-card border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-marsala/30"
                 />
               </div>
@@ -297,6 +304,8 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
                     placeholder="Total de páginas"
                     value={manualPages}
                     onChange={(e) => setManualPages(e.target.value)}
+                    min={1}
+                    max={100000}
                     className="w-full px-3 py-2.5 bg-card border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-marsala/30"
                   />
                 </div>
@@ -322,6 +331,7 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
                   placeholder="https://exemplo.com/capa.jpg"
                   value={manualCover}
                   onChange={(e) => setManualCover(e.target.value)}
+                  maxLength={1000}
                   className="w-full px-3 py-2.5 bg-card border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-marsala/30"
                 />
               </div>

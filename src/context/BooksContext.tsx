@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { type Book, type BookNote, mockBooks } from "@/data/mockBooks";
+import { sanitizeCoverUrl } from "@/lib/googleBooks";
 import { toast } from "sonner";
 
 interface BooksContextType {
@@ -179,19 +180,24 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
 
   const logoutGuest = useCallback(() => {
     localStorage.removeItem(GUEST_KEY);
+    localStorage.removeItem(GUEST_BOOKS_KEY);
+    localStorage.removeItem(GUEST_GOAL_KEY);
+    localStorage.removeItem(QUEUE_KEY);
     setIsGuest(false);
     setUserId(null);
     setBooks([]);
+    setReadingQueue([]);
+    setSelectedBookId(null);
   }, []);
 
-  // Load from Supabase DB
+  // Load from Supabase DB (com filtro defensivo por user_id)
   const loadAll = useCallback(async (_uid: string) => {
     setLoading(true);
     try {
       const [{ data: booksData, error: booksErr }, { data: notesData }, { data: goalData }] = await Promise.all([
-        supabase.from("books").select("*").order("created_at", { ascending: false }),
-        supabase.from("journal_notes").select("*").order("created_at", { ascending: true }),
-        supabase.from("reading_goals").select("*").eq("year", new Date().getFullYear()).maybeSingle(),
+        supabase.from("books").select("*").eq("user_id", _uid).order("created_at", { ascending: false }),
+        supabase.from("journal_notes").select("*").eq("user_id", _uid).order("created_at", { ascending: true }),
+        supabase.from("reading_goals").select("*").eq("user_id", _uid).eq("year", new Date().getFullYear()).maybeSingle(),
       ]);
 
       if (booksErr) throw booksErr;
@@ -239,8 +245,12 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
         setUserId("guest");
         loadGuestData();
       } else {
+        // Limpeza completa de sessão
         setUserId(null);
         setBooks([]);
+        setReadingQueue([]);
+        setSelectedBookId(null);
+        localStorage.removeItem(QUEUE_KEY);
         setLoading(false);
       }
     });
@@ -273,10 +283,16 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Helper to persist Supabase
+  // Helper to persist Supabase com proteção BOLA
   const persistBook = async (id: string, updates: Partial<DbBook>) => {
-    if (isGuest || userId === "guest") return;
-    const { error } = await supabase.from("books").update(updates).eq("id", id);
+    if (isGuest || userId === "guest" || !userId) return;
+    // Remove campos que nunca podem ser alterados pelo cliente para evitar adulteração de posse
+    const { id: _ignoredId, user_id: _ignoredUserId, ...safeUpdates } = updates as any;
+    const { error } = await supabase
+      .from("books")
+      .update(safeUpdates)
+      .eq("id", id)
+      .eq("user_id", userId);
     if (error) {
       console.error(error);
       toast.error("Erro ao salvar alteração");
@@ -317,16 +333,16 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
 
     const insertData = {
       user_id: userId,
-      title: book.title,
-      author: book.author || null,
-      cover: book.cover || null,
-      category: book.category || null,
-      vibes: book.vibes || [],
-      ownership: book.ownership,
-      status: book.status,
-      total_pages: book.totalPages || 0,
-      current_page: book.currentPage || 0,
-      rating: book.rating || 0,
+      title: String(book.title || "").trim().slice(0, 250),
+      author: String(book.author || "Autor desconhecido").trim().slice(0, 150),
+      cover: sanitizeCoverUrl(book.cover),
+      category: String(book.category || "Outros").trim().slice(0, 50),
+      vibes: Array.isArray(book.vibes) ? book.vibes.slice(0, 10).map(v => String(v).trim().slice(0, 30)) : [],
+      ownership: book.ownership === "pretendo" ? "pretendo" : "tenho",
+      status: ["lido", "lendo", "nao-lido"].includes(book.status) ? book.status : "nao-lido",
+      total_pages: Math.max(0, Math.min(Number(book.totalPages) || 0, 100000)),
+      current_page: Math.max(0, Math.min(Number(book.currentPage) || 0, 100000)),
+      rating: Math.max(0, Math.min(5, Number(book.rating) || 0)),
     };
 
     const { data, error } = await supabase.from("books").insert(insertData).select().single();
@@ -342,9 +358,9 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteBook = useCallback(async (bookId: string) => {
     try {
-      if (!isGuest && userId !== "guest") {
-        await supabase.from("journal_notes").delete().eq("book_id", bookId);
-        const { error } = await supabase.from("books").delete().eq("id", bookId);
+      if (!isGuest && userId && userId !== "guest") {
+        await supabase.from("journal_notes").delete().eq("book_id", bookId).eq("user_id", userId);
+        const { error } = await supabase.from("books").delete().eq("id", bookId).eq("user_id", userId);
         if (error) {
           toast.error("Erro ao remover do banco de dados");
           return;
@@ -386,18 +402,18 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     if (isGuest || userId === "guest") return;
 
     const dbUpdates: Partial<DbBook> = {};
-    if (updates.title !== undefined) dbUpdates.title = updates.title;
-    if (updates.author !== undefined) dbUpdates.author = updates.author;
-    if (updates.cover !== undefined) dbUpdates.cover = updates.cover;
-    if (updates.category !== undefined) dbUpdates.category = updates.category;
-    if (updates.vibes !== undefined) dbUpdates.vibes = updates.vibes;
+    if (updates.title !== undefined) dbUpdates.title = String(updates.title).trim().slice(0, 250);
+    if (updates.author !== undefined) dbUpdates.author = String(updates.author).trim().slice(0, 150);
+    if (updates.cover !== undefined) dbUpdates.cover = sanitizeCoverUrl(updates.cover);
+    if (updates.category !== undefined) dbUpdates.category = String(updates.category).trim().slice(0, 50);
+    if (updates.vibes !== undefined) dbUpdates.vibes = Array.isArray(updates.vibes) ? updates.vibes.slice(0, 10).map(v => String(v).trim().slice(0, 30)) : [];
     if (updates.ownership !== undefined) dbUpdates.ownership = updates.ownership;
     if (updates.status !== undefined) dbUpdates.status = updates.status;
-    if (updates.totalPages !== undefined) dbUpdates.total_pages = updates.totalPages;
-    if (updates.currentPage !== undefined) dbUpdates.current_page = updates.currentPage;
-    if (updates.rating !== undefined) dbUpdates.rating = updates.rating;
-    if (updates.review !== undefined) dbUpdates.resenha = updates.review;
-    if (updates.quotes !== undefined) dbUpdates.quotes = updates.quotes;
+    if (updates.totalPages !== undefined) dbUpdates.total_pages = Math.max(0, Math.min(Number(updates.totalPages) || 0, 100000));
+    if (updates.currentPage !== undefined) dbUpdates.current_page = Math.max(0, Math.min(Number(updates.currentPage) || 0, 100000));
+    if (updates.rating !== undefined) dbUpdates.rating = Math.max(0, Math.min(5, Number(updates.rating) || 0));
+    if (updates.review !== undefined) dbUpdates.resenha = String(updates.review).slice(0, 5000);
+    if (updates.quotes !== undefined) dbUpdates.quotes = Array.isArray(updates.quotes) ? updates.quotes.slice(0, 50).map(q => String(q).slice(0, 500)) : [];
     if (updates.subRatings !== undefined) dbUpdates.sub_ratings = subRatingsToDb(updates.subRatings);
     if (updates.dateFinished !== undefined) dbUpdates.date_finished = updates.dateFinished || null;
 
@@ -407,10 +423,15 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
   const addNote = useCallback(async (bookId: string, note: BookNote) => {
     if (!userId) return;
 
+    const safeText = String(note.text || "").trim().slice(0, 2000);
+    const safeChapter = note.chapter ? String(note.chapter).trim().slice(0, 100) : "";
+
     if (isGuest || userId === "guest") {
       const saved: BookNote = {
         ...note,
-        id: `note_${Date.now()}`,
+        text: safeText,
+        chapter: safeChapter,
+        id: `guest_note_${Date.now()}`,
       };
       setBooks(prev => {
         const next = prev.map(b =>
@@ -426,8 +447,8 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     const { data, error } = await supabase.from("journal_notes").insert({
       user_id: userId,
       book_id: bookId,
-      reaction: note.text,
-      chapter: note.chapter || null,
+      reaction: safeText,
+      chapter: safeChapter || null,
     }).select().single();
 
     if (error) {
@@ -436,7 +457,7 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const saved: BookNote = { ...note, id: (data as { id?: string })?.id };
+    const saved: BookNote = { ...note, text: safeText, chapter: safeChapter, id: (data as { id?: string })?.id };
     setBooks(prev => prev.map(b => (b.id === bookId ? { ...b, notes: [...(b.notes || []), saved] } : b)));
     toast.success("Anotação adicionada! 📝");
   }, [userId, isGuest]);
@@ -444,8 +465,8 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
   const deleteNote = useCallback(async (bookId: string, noteId?: string) => {
     if (!noteId) return;
 
-    if (!isGuest && userId !== "guest") {
-      const { error } = await supabase.from("journal_notes").delete().eq("id", noteId);
+    if (!isGuest && userId && userId !== "guest") {
+      const { error } = await supabase.from("journal_notes").delete().eq("id", noteId).eq("user_id", userId);
       if (error) {
         console.error(error);
         toast.error("Erro ao remover anotação");
@@ -510,9 +531,10 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const setGoalTarget = useCallback(async (target: number) => {
-    setReadingGoal(prev => ({ ...prev, target }));
+    const safeTarget = Math.max(1, Math.min(parseInt(String(target)) || 12, 1000));
+    setReadingGoal(prev => ({ ...prev, target: safeTarget }));
     if (isGuest || userId === "guest") {
-      localStorage.setItem(GUEST_GOAL_KEY, String(target));
+      localStorage.setItem(GUEST_GOAL_KEY, String(safeTarget));
       toast.success("Meta atualizada!");
       return;
     }
@@ -520,7 +542,7 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
 
     const year = new Date().getFullYear();
     const { error } = await supabase.from("reading_goals").upsert(
-      { user_id: userId, year, goal: target },
+      { user_id: userId, year, goal: safeTarget },
       { onConflict: "user_id,year" }
     );
     if (error) {
@@ -532,13 +554,16 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
   }, [userId, isGuest]);
 
   const addReview = useCallback((bookId: string, review: string) => {
-    updateBook(bookId, { review });
+    const safeReview = String(review || "").trim().slice(0, 5000);
+    updateBook(bookId, { review: safeReview });
     toast.success("Resenha salva! ✍️");
   }, [updateBook]);
 
   const addQuote = useCallback((bookId: string, quote: string) => {
     const book = books.find(b => b.id === bookId);
-    const quotes = [...(book?.quotes || []), quote];
+    const safeQuote = String(quote || "").trim().slice(0, 500);
+    if (!safeQuote) return;
+    const quotes = [...(book?.quotes || []), safeQuote];
     updateBook(bookId, { quotes });
     toast.success("Citação adicionada!");
   }, [books, updateBook]);
