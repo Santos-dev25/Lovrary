@@ -7,12 +7,12 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Dependências (O mais importante!)
+# Dependências
 node_modules/
 .pnp
 .pnp.js
 
-# Pastas de build/produção (geradas pelo Vite)
+# Pastas de build / produção (geradas pelo Vite)
 dist/
 dist-ssr/
 build/
@@ -20,12 +20,20 @@ build/
 # Arquivos de teste e cobertura
 coverage/
 
-# Arquivos de ambiente local (Senhas e chaves da API)
+# ==========================================
+# ARQUIVOS DE AMBIENTE E SEGREDO (BLINDAGEM)
+# ==========================================
 .env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+.env*.local
+.env.*
+!.env.example
 
 # Arquivos de cache do Bun, Vite e ESLint
 .eslintcache
@@ -34,6 +42,7 @@ coverage/
 
 # Arquivos do sistema e editores (VS Code, Mac, etc.)
 .DS_Store
+Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
