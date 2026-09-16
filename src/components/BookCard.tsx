@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Star, Bookmark } from "lucide-react";
 import type { Book } from "@/data/mockBooks";
 import { motion } from "framer-motion";
@@ -22,18 +23,17 @@ const statusConfig = {
   },
 };
 
-const BookCard = ({ book, onClick }: BookCardProps) => {
+const BookCard = memo(({ book, onClick }: BookCardProps) => {
   const status = statusConfig[book.status] || statusConfig["nao-lido"];
   const hasNotes = book.notes && book.notes.length > 0;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -5 }}
-      transition={{ duration: 0.25 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
       onClick={onClick}
-      className="group relative bg-card rounded-2xl border border-border/80 shadow-card hover:shadow-card-hover transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between"
+      className="group relative bg-card rounded-2xl border border-border/80 shadow-card hover:shadow-card-hover transition-transform duration-200 ease-out hover:-translate-y-1 will-change-transform cursor-pointer overflow-hidden flex flex-col justify-between"
     >
       <div>
         {/* Book Cover Container with Spine Effect */}
@@ -41,7 +41,7 @@ const BookCard = ({ book, onClick }: BookCardProps) => {
           <img
             src={book.cover}
             alt={book.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
             loading="lazy"
           />
 
@@ -145,6 +145,8 @@ const BookCard = ({ book, onClick }: BookCardProps) => {
       )}
     </motion.div>
   );
-};
+});
+
+BookCard.displayName = "BookCard";
 
 export default BookCard;

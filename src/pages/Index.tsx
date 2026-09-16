@@ -37,7 +37,7 @@ const Index = () => {
   }, [isDark]);
 
   // Combine standard classifications with any custom classifications present in user's books
-  const availableCategories = [
+  const availableCategories = useMemo(() => [
     "Todos",
     ...Array.from(
       new Set([
@@ -45,7 +45,7 @@ const Index = () => {
         ...books.filter(b => b.ownership === "tenho" && b.category).map(b => b.category!),
       ])
     ).sort((a, b) => a.localeCompare(b)),
-  ];
+  ], [books]);
 
   const filteredBooks = useMemo(() => {
     const list = books.filter((b) => {
@@ -317,7 +317,7 @@ const Index = () => {
       </header>
 
       <main
-        className={`p-4 sm:p-6 lg:p-8 transition-all duration-300 ${sidebarCollapsed ? "md:ml-[72px]" : "md:ml-64"
+        className={`p-4 sm:p-6 lg:p-8 transition-[margin] duration-200 ease-in-out ${sidebarCollapsed ? "md:ml-[72px]" : "md:ml-64"
           }`}
       >
         {renderContent()}

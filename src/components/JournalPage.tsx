@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useBooks } from "@/context/BooksContext";
 import { BookOpen, Bookmark, Plus, Trash2, Pencil, Check, X } from "lucide-react";
-import { motion } from "framer-motion";
 import { toast } from "sonner";
 
 const JournalPage = () => {
   const { books, addNote, updateNote, deleteNote, updateProgress, setSelectedBook } = useBooks();
-  const reading = books.filter(b => b.status === "lendo");
+  const reading = useMemo(() => books.filter(b => b.status === "lendo"), [books]);
 
   const [activeBookId, setActiveBookId] = useState<string>(reading[0]?.id || "");
   const [noteText, setNoteText] = useState("");
@@ -26,7 +25,15 @@ const JournalPage = () => {
     }
   }, [reading, activeBookId]);
 
-  const activeBook = books.find(b => b.id === activeBookId && b.status === "lendo");
+  const activeBook = useMemo(
+    () => books.find(b => b.id === activeBookId && b.status === "lendo"),
+    [books, activeBookId]
+  );
+
+  const reversedNotes = useMemo(
+    () => (activeBook?.notes || []).slice().reverse(),
+    [activeBook?.notes]
+  );
 
   const handleAddNote = () => {
     if (!noteText.trim() || !activeBook) return;
@@ -178,13 +185,10 @@ const JournalPage = () => {
           <div className="bg-card rounded-xl border border-border p-4">
             <h4 className="text-sm font-semibold text-foreground mb-4">Histórico de Reações</h4>
             <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-              {(activeBook.notes || []).slice().reverse().map((note, i) => (
-                <motion.div
+              {reversedNotes.map((note, i) => (
+                <div
                   key={note.id || i}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="relative pl-4 border-l-2 border-marsala/30"
+                  className="relative pl-4 border-l-2 border-marsala/30 animate-fade-in"
                 >
                   <div className="absolute left-[-5px] top-1 w-2 h-2 rounded-full bg-marsala" />
                   <div className="bg-secondary/50 rounded-lg p-3">
@@ -271,7 +275,7 @@ const JournalPage = () => {
                       </>
                     )}
                   </div>
-                </motion.div>
+                </div>
               ))}
               {(!activeBook.notes || activeBook.notes.length === 0) && (
                 <p className="text-xs text-muted-foreground text-center py-8">

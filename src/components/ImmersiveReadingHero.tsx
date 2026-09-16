@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useBooks } from "@/context/BooksContext";
 import {
   BookOpen, Sparkles, ArrowRight, Bookmark, Check, Plus, Feather, Flame
@@ -15,23 +15,24 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
   const { books, updateProgress, setSelectedBook, startReading, readingQueue } = useBooks();
 
   // Livro ativo em leitura (prioriza o que tem maior progresso ou mais recente)
-  const activeBook = books.find(b => b.status === "lendo") || null;
+  const activeBook = useMemo(() => books.find(b => b.status === "lendo") || null, [books]);
   // Próximo livro da fila como alternativa
-  const nextInQueue = readingQueue.length > 0 ? books.find(b => b.id === readingQueue[0]) : null;
+  const nextInQueue = useMemo(
+    () => (readingQueue.length > 0 ? books.find(b => b.id === readingQueue[0]) || null : null),
+    [readingQueue, books]
+  );
 
   const [pageInput, setPageInput] = useState("");
   const [isEditingPage, setIsEditingPage] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
 
   // Saudação poética conforme o horário local
-  const getGreeting = () => {
+  const greeting = useMemo(() => {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 12) return { text: "Bom dia, leitora", icon: "☕" };
     if (hour >= 12 && hour < 18) return { text: "Boa tarde, leitora", icon: "📖" };
     return { text: "Boa noite, leitora", icon: "🕯️" };
-  };
-
-  const greeting = getGreeting();
+  }, []);
 
   const handleSavePage = () => {
     if (!activeBook) return;

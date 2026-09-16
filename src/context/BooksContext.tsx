@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { type Book, type BookNote, mockBooks } from "@/data/mockBooks";
 import { sanitizeCoverUrl } from "@/lib/googleBooks";
@@ -138,7 +138,12 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [isGuest, setIsGuest] = useState<boolean>(() => localStorage.getItem(GUEST_KEY) === "true");
 
-  const selectedBook = books.find(b => b.id === selectedBookId) || null;
+  const booksRef = useRef<Book[]>(books);
+  useEffect(() => {
+    booksRef.current = books;
+  }, [books]);
+
+  const selectedBook = useMemo(() => books.find(b => b.id === selectedBookId) || null, [books, selectedBookId]);
   const setSelectedBook = useCallback((b: Book | null) => {
     setSelectedBookId(b ? b.id : null);
   }, []);
@@ -307,8 +312,9 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     }
 
     // Deduplicate by title + author
+    const currentBooks = booksRef.current;
     if (
-      books.find(
+      currentBooks.find(
         b =>
           b.title.trim().toLowerCase() === book.title.trim().toLowerCase() &&
           b.author.trim().toLowerCase() === book.author.trim().toLowerCase()
@@ -355,33 +361,37 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
 
     setBooks(prev => [dbToBook(data as unknown as DbBook, []), ...prev]);
     toast.success(book.ownership === "tenho" ? "Livro adicionado ao acervo! 📚" : "Adicionado à lista de desejos! 💫");
-  }, [userId, books, isGuest]);
+  }, [userId, isGuest]);
 
   const deleteBook = useCallback(async (bookId: string) => {
+    const previousBooks = booksRef.current;
+    const previousQueue = readingQueue;
+
+    // 1. Atualização otimista imediata na UI (0ms de atraso perceptível)
+    setBooks(prev => {
+      const next = prev.filter(b => b.id !== bookId);
+      if (isGuest || userId === "guest") persistGuestBooks(next);
+      return next;
+    });
+
+    setReadingQueue(prev => prev.filter(id => id !== bookId));
+    setSelectedBookId(prev => (prev === bookId ? null : prev));
+    toast.success("Livro removido do acervo!");
+
+    if (isGuest || userId === "guest" || !userId) return;
+
+    // 2. Persistência assíncrona com rollback em caso de falha de rede
     try {
-      if (!isGuest && userId && userId !== "guest") {
-        await supabase.from("journal_notes").delete().eq("book_id", bookId).eq("user_id", userId);
-        const { error } = await supabase.from("books").delete().eq("id", bookId).eq("user_id", userId);
-        if (error) {
-          toast.error("Erro ao remover do banco de dados");
-          return;
-        }
-      }
-
-      setBooks(prev => {
-        const next = prev.filter(b => b.id !== bookId);
-        if (isGuest || userId === "guest") persistGuestBooks(next);
-        return next;
-      });
-
-      setReadingQueue(prev => prev.filter(id => id !== bookId));
-      setSelectedBookId(prev => (prev === bookId ? null : prev));
-      toast.success("Livro removido do acervo!");
+      await supabase.from("journal_notes").delete().eq("book_id", bookId).eq("user_id", userId);
+      const { error } = await supabase.from("books").delete().eq("id", bookId).eq("user_id", userId);
+      if (error) throw error;
     } catch (e) {
-      console.error(e);
-      toast.error("Erro ao excluir livro");
+      console.error("Erro ao excluir livro no Supabase:", e);
+      setBooks(previousBooks);
+      setReadingQueue(previousQueue);
+      toast.error("Erro ao sincronizar exclusão com o servidor. Ação desfeita.");
     }
-  }, [isGuest, userId]);
+  }, [isGuest, userId, readingQueue]);
 
   const updateBook = useCallback((id: string, updates: Partial<Book>) => {
     const recalc = (b: Book): Book => {
@@ -426,86 +436,85 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
 
     const safeText = String(note.text || "").trim().slice(0, 2000);
     const safeChapter = note.chapter ? String(note.chapter).trim().slice(0, 100) : "";
+    const tempId = `temp_note_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
-    if (isGuest || userId === "guest") {
-      const saved: BookNote = {
-        ...note,
-        text: safeText,
-        chapter: safeChapter,
-        id: `guest_note_${Date.now()}`,
-      };
-      setBooks(prev => {
-        const next = prev.map(b =>
-          b.id === bookId ? { ...b, notes: [...(b.notes || []), saved] } : b
-        );
-        persistGuestBooks(next);
-        return next;
-      });
-      toast.success("Anotação adicionada! 📝");
-      return;
-    }
+    const optimisticNote: BookNote = {
+      ...note,
+      id: tempId,
+      text: safeText,
+      chapter: safeChapter,
+    };
 
-    const { data, error } = await supabase.from("journal_notes").insert({
-      user_id: userId,
-      book_id: bookId,
-      reaction: safeText,
-      chapter: safeChapter || null,
-    }).select().single();
-
-    if (error) {
-      console.error(error);
-      toast.error("Erro ao salvar anotação");
-      return;
-    }
-
-    const saved: BookNote = { ...note, text: safeText, chapter: safeChapter, id: (data as { id?: string })?.id };
-    setBooks(prev => prev.map(b => (b.id === bookId ? { ...b, notes: [...(b.notes || []), saved] } : b)));
+    // Resposta instantânea na interface
+    setBooks(prev => {
+      const next = prev.map(b => (b.id === bookId ? { ...b, notes: [...(b.notes || []), optimisticNote] } : b));
+      if (isGuest || userId === "guest") persistGuestBooks(next);
+      return next;
+    });
     toast.success("Anotação adicionada! 📝");
+
+    if (isGuest || userId === "guest") return;
+
+    try {
+      const { data, error } = await supabase.from("journal_notes").insert({
+        user_id: userId,
+        book_id: bookId,
+        reaction: safeText,
+        chapter: safeChapter || null,
+      }).select().single();
+
+      if (error) throw error;
+
+      if (data?.id) {
+        setBooks(prev => prev.map(b => {
+          if (b.id !== bookId) return b;
+          return {
+            ...b,
+            notes: (b.notes || []).map(n => (n.id === tempId ? { ...n, id: data.id } : n)),
+          };
+        }));
+      }
+    } catch (err) {
+      console.error("Erro ao salvar anotação:", err);
+      // Rollback
+      setBooks(prev => prev.map(b => (b.id === bookId ? { ...b, notes: (b.notes || []).filter(n => n.id !== tempId) } : b)));
+      toast.error("Erro ao salvar anotação na nuvem.");
+    }
   }, [userId, isGuest]);
 
   const deleteNote = useCallback(async (bookId: string, noteId?: string) => {
     if (!noteId) return;
 
-    if (!isGuest && userId && userId !== "guest") {
-      const { error } = await supabase.from("journal_notes").delete().eq("id", noteId).eq("user_id", userId);
-      if (error) {
-        console.error(error);
-        toast.error("Erro ao remover anotação");
-        return;
-      }
-    }
-
+    const previousBooks = booksRef.current;
     const strip = (b: Book): Book => ({ ...b, notes: (b.notes || []).filter(n => n.id !== noteId) });
+
+    // Atualização otimista imediata
     setBooks(prev => {
       const next = prev.map(b => (b.id === bookId ? strip(b) : b));
       if (isGuest || userId === "guest") persistGuestBooks(next);
       return next;
     });
+
+    if (isGuest || userId === "guest" || !userId) return;
+
+    try {
+      const { error } = await supabase.from("journal_notes").delete().eq("id", noteId).eq("user_id", userId);
+      if (error) throw error;
+    } catch (err) {
+      console.error("Erro ao remover anotação:", err);
+      setBooks(previousBooks);
+      toast.error("Erro ao sincronizar exclusão da anotação.");
+    }
   }, [isGuest, userId]);
 
   const updateNote = useCallback(async (bookId: string, noteId: string, updates: { text: string; chapter?: string }) => {
     if (!noteId) return;
 
+    const previousBooks = booksRef.current;
     const safeText = String(updates.text || "").trim().slice(0, 2000);
     const safeChapter = updates.chapter ? String(updates.chapter).trim().slice(0, 100) : "";
 
-    if (!isGuest && userId && userId !== "guest") {
-      const { error } = await supabase
-        .from("journal_notes")
-        .update({
-          reaction: safeText,
-          chapter: safeChapter || null,
-        })
-        .eq("id", noteId)
-        .eq("user_id", userId);
-
-      if (error) {
-        console.error(error);
-        toast.error("Erro ao atualizar anotação");
-        return;
-      }
-    }
-
+    // Atualização otimista imediata
     setBooks(prev => {
       const next = prev.map(b => {
         if (b.id !== bookId) return b;
@@ -526,6 +535,25 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     });
 
     toast.success("Anotação atualizada! ✍️");
+
+    if (isGuest || userId === "guest" || !userId) return;
+
+    try {
+      const { error } = await supabase
+        .from("journal_notes")
+        .update({
+          reaction: safeText,
+          chapter: safeChapter || null,
+        })
+        .eq("id", noteId)
+        .eq("user_id", userId);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error("Erro ao atualizar anotação:", err);
+      setBooks(previousBooks);
+      toast.error("Erro ao sincronizar edição no servidor.");
+    }
   }, [isGuest, userId]);
 
   const moveToAcervo = useCallback((bookId: string) => {
@@ -541,22 +569,22 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
   }, [updateBook]);
 
   const finishReading = useCallback((bookId: string) => {
-    const book = books.find(b => b.id === bookId);
+    const book = booksRef.current.find(b => b.id === bookId);
     const total = book?.totalPages || 0;
     const today = new Date().toISOString().slice(0, 10);
     updateBook(bookId, { status: "lido", currentPage: total, dateFinished: book?.dateFinished || today });
     setReadingGoal(prev => ({ ...prev, current: prev.current + 1 }));
     toast.success("Parabéns por finalizar o livro! 🎉");
-  }, [books, updateBook]);
+  }, [updateBook]);
 
   const updateProgress = useCallback((bookId: string, currentPage: number) => {
-    const book = books.find(b => b.id === bookId);
+    const book = booksRef.current.find(b => b.id === bookId);
     const validPage = Math.max(0, currentPage);
     const total = book?.totalPages || 0;
     updateBook(bookId, { currentPage: validPage });
     const pct = total > 0 ? Math.min(Math.round((validPage / total) * 100), 100) : 0;
     toast.success(`Progresso atualizado para pág. ${validPage} (${pct}%)`);
-  }, [books, updateBook]);
+  }, [updateBook]);
 
   const addToQueue = useCallback((bookId: string) => {
     setReadingQueue(prev => (prev.includes(bookId) ? prev : [...prev, bookId]));
@@ -579,9 +607,10 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
   const setGoalTarget = useCallback(async (target: number) => {
     const safeTarget = Math.max(1, Math.min(parseInt(String(target)) || 12, 1000));
     setReadingGoal(prev => ({ ...prev, target: safeTarget }));
+    toast.success("Meta atualizada!");
+
     if (isGuest || userId === "guest") {
       localStorage.setItem(GUEST_GOAL_KEY, String(safeTarget));
-      toast.success("Meta atualizada!");
       return;
     }
     if (!userId) return;
@@ -593,10 +622,8 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     );
     if (error) {
       console.error(error);
-      toast.error("Erro ao salvar meta");
-      return;
+      toast.error("Erro ao sincronizar meta na nuvem");
     }
-    toast.success("Meta atualizada!");
   }, [userId, isGuest]);
 
   const addReview = useCallback((bookId: string, review: string) => {
@@ -606,54 +633,62 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
   }, [updateBook]);
 
   const addQuote = useCallback((bookId: string, quote: string) => {
-    const book = books.find(b => b.id === bookId);
+    const book = booksRef.current.find(b => b.id === bookId);
     const safeQuote = String(quote || "").trim().slice(0, 500);
     if (!safeQuote) return;
     const quotes = [...(book?.quotes || []), safeQuote];
     updateBook(bookId, { quotes });
     toast.success("Citação adicionada!");
-  }, [books, updateBook]);
+  }, [updateBook]);
 
   const removeQuote = useCallback((bookId: string, index: number) => {
-    const book = books.find(b => b.id === bookId);
+    const book = booksRef.current.find(b => b.id === bookId);
     const quotes = [...(book?.quotes || [])];
     quotes.splice(index, 1);
     updateBook(bookId, { quotes });
-  }, [books, updateBook]);
+  }, [updateBook]);
 
   const setRating = useCallback((bookId: string, rating: number) => {
     updateBook(bookId, { rating });
   }, [updateBook]);
 
   const setSubRating = useCallback((bookId: string, label: string, value: number) => {
-    const book = books.find(b => b.id === bookId);
+    const book = booksRef.current.find(b => b.id === bookId);
     const subRatings = [...(book?.subRatings || [])];
     const idx = subRatings.findIndex(s => s.label.toLowerCase() === label.toLowerCase());
     if (idx >= 0) subRatings[idx] = { label, value };
     else subRatings.push({ label, value });
     updateBook(bookId, { subRatings });
-  }, [books, updateBook]);
+  }, [updateBook]);
 
   const addVibe = useCallback((bookId: string, vibe: string) => {
-    const book = books.find(b => b.id === bookId);
+    const book = booksRef.current.find(b => b.id === bookId);
     if (!book || book.vibes.some(v => v.toLowerCase() === vibe.toLowerCase())) return;
     updateBook(bookId, { vibes: [...book.vibes, vibe] });
-  }, [books, updateBook]);
+  }, [updateBook]);
 
   const removeVibe = useCallback((bookId: string, vibe: string) => {
-    const book = books.find(b => b.id === bookId);
+    const book = booksRef.current.find(b => b.id === bookId);
     if (!book) return;
     updateBook(bookId, { vibes: book.vibes.filter(v => v.toLowerCase() !== vibe.toLowerCase()) });
-  }, [books, updateBook]);
+  }, [updateBook]);
+
+  const contextValue = useMemo(() => ({
+    books, loading, isGuest, loginAsGuest, logoutGuest, addBook, readingQueue,
+    readingGoal: readingGoalState, selectedBook, setSelectedBook, updateBook,
+    addNote, updateNote, deleteNote, moveToAcervo, startReading, finishReading, updateProgress,
+    addToQueue, removeFromQueue, reorderQueue, setGoalTarget, addReview, addQuote,
+    removeQuote, setRating, setSubRating, addVibe, removeVibe, deleteBook,
+  }), [
+    books, loading, isGuest, loginAsGuest, logoutGuest, addBook, readingQueue,
+    readingGoalState, selectedBook, setSelectedBook, updateBook,
+    addNote, updateNote, deleteNote, moveToAcervo, startReading, finishReading, updateProgress,
+    addToQueue, removeFromQueue, reorderQueue, setGoalTarget, addReview, addQuote,
+    removeQuote, setRating, setSubRating, addVibe, removeVibe, deleteBook,
+  ]);
 
   return (
-    <BooksContext.Provider value={{
-      books, loading, isGuest, loginAsGuest, logoutGuest, addBook, readingQueue,
-      readingGoal: readingGoalState, selectedBook, setSelectedBook, updateBook,
-      addNote, updateNote, deleteNote, moveToAcervo, startReading, finishReading, updateProgress,
-      addToQueue, removeFromQueue, reorderQueue, setGoalTarget, addReview, addQuote,
-      removeQuote, setRating, setSubRating, addVibe, removeVibe, deleteBook,
-    }}>
+    <BooksContext.Provider value={contextValue}>
       {children}
     </BooksContext.Provider>
   );

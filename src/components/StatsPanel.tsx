@@ -1,43 +1,56 @@
+import { useMemo } from "react";
 import { useBooks } from "@/context/BooksContext";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from "recharts";
 import { BookOpen, TrendingUp, Award, Target, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 
+const MONTH_NAMES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
 const StatsPanel = () => {
   const { books, readingGoal: goal } = useBooks();
 
-  const booksRead = books.filter((b) => b.status === "lido").length;
-  const booksReading = books.filter((b) => b.status === "lendo").length;
-  const goalProgress = goal.target > 0 ? Math.round((goal.current / goal.target) * 100) : 0;
+  const { booksRead, booksReading, goalProgress, pagesRead, monthlyStats, bestMonth, statCards } = useMemo(() => {
+    const booksReadCount = books.filter((b) => b.status === "lido").length;
+    const booksReadingCount = books.filter((b) => b.status === "lendo").length;
+    const progress = goal.target > 0 ? Math.round((goal.current / goal.target) * 100) : 0;
 
-  // Total de páginas lidas
-  const pagesRead = books.reduce((sum, b) => {
-    if (b.status === "lido") return sum + (b.totalPages || 0);
-    if (b.status === "lendo") return sum + (b.currentPage || 0);
-    return sum;
-  }, 0);
+    const totalPages = books.reduce((sum, b) => {
+      if (b.status === "lido") return sum + (b.totalPages || 0);
+      if (b.status === "lendo") return sum + (b.currentPage || 0);
+      return sum;
+    }, 0);
 
-  const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-  const monthlyStats = months.map((month, i) => {
-    const count = books.filter((b) => {
-      if (b.status !== "lido" || !b.dateFinished) return false;
-      const d = new Date(b.dateFinished);
-      return !isNaN(d.getTime()) && d.getMonth() === i;
-    }).length;
-    return { month, count };
-  });
+    const mStats = MONTH_NAMES.map((month, i) => {
+      const count = books.filter((b) => {
+        if (b.status !== "lido" || !b.dateFinished) return false;
+        const d = new Date(b.dateFinished);
+        return !isNaN(d.getTime()) && d.getMonth() === i;
+      }).length;
+      return { month, count };
+    });
 
-  const bestMonth = monthlyStats.reduce(
-    (a, b) => (a.count > b.count ? a : b),
-    { month: "—", count: 0 }
-  );
+    const bMonth = mStats.reduce(
+      (a, b) => (a.count > b.count ? a : b),
+      { month: "—", count: 0 }
+    );
 
-  const statCards = [
-    { icon: BookOpen, label: "Livros Lidos", value: booksRead, sub: `em ${goal.year}` },
-    { icon: FileText, label: "Páginas Lidas", value: pagesRead.toLocaleString("pt-BR"), sub: "total acumulado" },
-    { icon: TrendingUp, label: "Lendo Agora", value: booksReading, sub: "em andamento" },
-    { icon: Award, label: "Mês Destaque", value: bestMonth.month, sub: `${bestMonth.count} livro(s)` },
-  ];
+    const cards = [
+      { icon: BookOpen, label: "Livros Lidos", value: booksReadCount, sub: `em ${goal.year}` },
+      { icon: FileText, label: "Páginas Lidas", value: totalPages.toLocaleString("pt-BR"), sub: "total acumulado" },
+      { icon: TrendingUp, label: "Lendo Agora", value: booksReadingCount, sub: "em andamento" },
+      { icon: Award, label: "Mês Destaque", value: bMonth.month, sub: `${bMonth.count} livro(s)` },
+    ];
+
+    return {
+      booksRead: booksReadCount,
+      booksReading: booksReadingCount,
+      goalProgress: progress,
+      pagesRead: totalPages,
+      monthlyStats: mStats,
+      bestMonth: bMonth,
+      statCards: cards,
+    };
+  }, [books, goal]);
 
   return (
     <div className="space-y-6">

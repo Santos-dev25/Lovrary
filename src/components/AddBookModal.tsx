@@ -35,6 +35,8 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState("");
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const [isManualAdding, setIsManualAdding] = useState(false);
   const { addBook, books } = useBooks();
 
   // Manual form state
@@ -64,7 +66,9 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
     }
   };
 
-  const handleAdd = (item: GoogleBookItem, ownership: "tenho" | "pretendo") => {
+  const handleAdd = async (item: GoogleBookItem, ownership: "tenho" | "pretendo") => {
+    if (addingId) return;
+    setAddingId(item.id);
     const v = item.volumeInfo;
     const cover = sanitizeCoverUrl(
       v.imageLinks?.thumbnail || v.imageLinks?.smallThumbnail || ""
@@ -85,11 +89,16 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
       totalPages: Math.max(0, Math.min(Number(v.pageCount) || 0, 100000)),
       currentPage: 0,
     };
-    addBook(newBook);
+    try {
+      await addBook(newBook);
+    } finally {
+      setAddingId(null);
+    }
   };
 
-  const handleManualAdd = (ownership: "tenho" | "pretendo") => {
-    if (!manualTitle.trim()) return;
+  const handleManualAdd = async (ownership: "tenho" | "pretendo") => {
+    if (!manualTitle.trim() || isManualAdding) return;
+    setIsManualAdding(true);
     const safeTitle = manualTitle.trim().slice(0, 250);
     const safeAuthor = (manualAuthor.trim() || "Autor desconhecido").slice(0, 150);
     const safePages = Math.max(0, Math.min(parseInt(manualPages) || 0, 100000));
@@ -108,12 +117,17 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
       totalPages: safePages,
       currentPage: 0,
     };
-    addBook(newBook);
-    setManualTitle("");
-    setManualAuthor("");
-    setManualPages("");
-    setManualCover("");
-    setManualCategory("Ficção");
+    try {
+      await addBook(newBook);
+      setManualTitle("");
+      setManualAuthor("");
+      setManualPages("");
+      setManualCover("");
+      setManualCategory("Ficção");
+      onClose();
+    } finally {
+      setIsManualAdding(false);
+    }
   };
 
   const isAdded = (googleId: string) => {
@@ -242,15 +256,27 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
                         <>
                           <button
                             onClick={() => handleAdd(item, "tenho")}
-                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium gradient-marsala text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+                            disabled={addingId === item.id}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium gradient-marsala text-primary-foreground rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
                           >
-                            <Plus className="w-3 h-3" /> Tenho
+                            {addingId === item.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Plus className="w-3 h-3" />
+                            )}
+                            <span>{addingId === item.id ? "Adicionando..." : "Tenho"}</span>
                           </button>
                           <button
                             onClick={() => handleAdd(item, "pretendo")}
-                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-marsala text-marsala rounded-lg hover:bg-marsala/10 transition-colors"
+                            disabled={addingId === item.id}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-marsala text-marsala rounded-lg hover:bg-marsala/10 transition-colors disabled:opacity-50"
                           >
-                            <Star className="w-3 h-3" /> Quero ter
+                            {addingId === item.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Star className="w-3 h-3" />
+                            )}
+                            <span>{addingId === item.id ? "Adicionando..." : "Quero ter"}</span>
                           </button>
                         </>
                       )}
@@ -359,17 +385,19 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
               <div className="flex gap-2 pt-2">
                 <button
                   onClick={() => handleManualAdd("tenho")}
-                  disabled={!manualTitle.trim()}
+                  disabled={!manualTitle.trim() || isManualAdding}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium gradient-marsala text-primary-foreground rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
-                  <Plus className="w-4 h-4" /> Tenho
+                  {isManualAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  <span>{isManualAdding ? "Adicionando..." : "Tenho"}</span>
                 </button>
                 <button
                   onClick={() => handleManualAdd("pretendo")}
-                  disabled={!manualTitle.trim()}
+                  disabled={!manualTitle.trim() || isManualAdding}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium border border-marsala text-marsala rounded-xl hover:bg-marsala/10 transition-colors disabled:opacity-50"
                 >
-                  <Star className="w-4 h-4" /> Quero ter
+                  {isManualAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
+                  <span>{isManualAdding ? "Adicionando..." : "Quero ter"}</span>
                 </button>
               </div>
             </div>

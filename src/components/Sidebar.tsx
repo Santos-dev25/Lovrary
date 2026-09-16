@@ -78,7 +78,7 @@ const Sidebar = ({
       )}
 
       <aside
-        className={`fixed left-0 top-0 h-screen bg-card border-r border-border flex flex-col transition-all duration-300 z-50
+        className={`fixed left-0 top-0 h-screen bg-card border-r border-border flex flex-col transition-[width,transform] duration-200 ease-in-out z-50
           ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0
           ${collapsed ? "md:w-[72px]" : "md:w-64"} w-[260px]`}
       >

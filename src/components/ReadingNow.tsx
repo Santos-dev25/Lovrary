@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useBooks } from "@/context/BooksContext";
 import { BookOpen, Bookmark, Check, Plus, X } from "lucide-react";
 import { motion } from "framer-motion";
@@ -11,13 +11,19 @@ const ReadingNow = ({ fullView }: ReadingNowProps) => {
   const { books, setSelectedBook, updateProgress, startReading } = useBooks();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSearch, setPickerSearch] = useState("");
-  const candidates = books.filter((b) => b.ownership === "tenho" && b.status !== "lendo");
-  const filteredCandidates = candidates.filter((b) => {
-    if (!pickerSearch.trim()) return true;
+
+  const candidates = useMemo(
+    () => books.filter((b) => b.ownership === "tenho" && b.status !== "lendo"),
+    [books]
+  );
+
+  const filteredCandidates = useMemo(() => {
+    if (!pickerSearch.trim()) return candidates;
     const q = pickerSearch.toLowerCase();
-    return b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q);
-  });
-  const currentlyReading = books.filter((b) => b.status === "lendo");
+    return candidates.filter((b) => b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q));
+  }, [candidates, pickerSearch]);
+
+  const currentlyReading = useMemo(() => books.filter((b) => b.status === "lendo"), [books]);
   const [pageInputs, setPageInputs] = useState<Record<string, string>>({});
 
   const handleSavePage = (bookId: string, total: number) => {

@@ -1,14 +1,20 @@
+import { useMemo } from "react";
 import { useBooks } from "@/context/BooksContext";
 import { GripVertical, X, Play, BookOpen, ArrowUp, ArrowDown } from "lucide-react";
 import { motion } from "framer-motion";
 
 const ReadingQueuePage = () => {
-  const { books, readingQueue, removeFromQueue, reorderQueue, startReading, setSelectedBook } = useBooks();
+  const { books, readingQueue, removeFromQueue, reorderQueue, startReading, setSelectedBook, addToQueue } = useBooks();
 
-  const queueBooks = readingQueue.map(id => books.find(b => b.id === id)).filter(Boolean) as typeof books;
-  const unreadBooks = books.filter(b => b.ownership === "tenho" && b.status === "nao-lido" && !readingQueue.includes(b.id));
+  const queueBooks = useMemo(
+    () => readingQueue.map(id => books.find(b => b.id === id)).filter(Boolean) as typeof books,
+    [readingQueue, books]
+  );
 
-  const { addToQueue } = useBooks();
+  const unreadBooks = useMemo(
+    () => books.filter(b => b.ownership === "tenho" && b.status === "nao-lido" && !readingQueue.includes(b.id)),
+    [books, readingQueue]
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">

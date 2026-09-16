@@ -1,16 +1,18 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useBooks } from "@/context/BooksContext";
 import { categories } from "@/data/mockBooks";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from "recharts";
 import { BookOpen, TrendingUp, Award, Target, Filter } from "lucide-react";
 import { motion } from "framer-motion";
 
+const MONTH_NAMES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
 const StatsPage = () => {
   const { books, readingGoal } = useBooks();
   const [categoryFilter, setCategoryFilter] = useState("Todos");
   const [yearFilter, setYearFilter] = useState<number>(readingGoal.year);
 
-  const availableYears = Array.from(
+  const availableYears = useMemo(() => Array.from(
     new Set([
       new Date().getFullYear(),
       readingGoal.year,
@@ -19,48 +21,69 @@ const StatsPage = () => {
         .map((b) => new Date(b.dateFinished!).getFullYear())
         .filter((y) => !isNaN(y)),
     ])
-  ).sort((a, b) => b - a);
+  ).sort((a, b) => b - a), [books, readingGoal.year]);
 
-  const filteredRead = books.filter((b) => {
-    if (b.status !== "lido") return false;
-    if (categoryFilter !== "Todos" && b.category !== categoryFilter) return false;
-    if (b.dateFinished) {
-      const d = new Date(b.dateFinished);
-      if (d.getFullYear() !== yearFilter) return false;
-    }
-    return true;
-  });
+  const { booksRead, totalPages, avgRating, monthlyStats, statCards, categoryBreakdown } = useMemo(() => {
+    const filteredRead = books.filter((b) => {
+      if (b.status !== "lido") return false;
+      if (categoryFilter !== "Todos" && b.category !== categoryFilter) return false;
+      if (b.dateFinished) {
+        const d = new Date(b.dateFinished);
+        if (d.getFullYear() !== yearFilter) return false;
+      }
+      return true;
+    });
 
-  const booksRead = filteredRead.length;
-  const totalPages = filteredRead.reduce((s, b) => s + (b.totalPages || 0), 0);
-  const avgRating = filteredRead.length > 0
-    ? (filteredRead.reduce((s, b) => s + b.rating, 0) / filteredRead.length).toFixed(1)
-    : "—";
+    const readCount = filteredRead.length;
+    const pages = filteredRead.reduce((s, b) => s + (b.totalPages || 0), 0);
+    const avg = filteredRead.length > 0
+      ? (filteredRead.reduce((s, b) => s + b.rating, 0) / filteredRead.length).toFixed(1)
+      : "—";
 
-  const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-  const monthlyStats = months.map((month, i) => {
-    const count = filteredRead.filter((b) => {
-      if (!b.dateFinished) return false;
-      const d = new Date(b.dateFinished);
-      return d.getFullYear() === yearFilter && d.getMonth() === i;
-    }).length;
-    return { month, count };
-  });
+    const mStats = MONTH_NAMES.map((month, i) => {
+      const count = filteredRead.filter((b) => {
+        if (!b.dateFinished) return false;
+        const d = new Date(b.dateFinished);
+        return d.getFullYear() === yearFilter && d.getMonth() === i;
+      }).length;
+      return { month, count };
+    });
 
-  const bestMonth = monthlyStats.reduce((a, b) => a.count > b.count ? a : b, { month: "—", count: 0 });
+    const bMonth = mStats.reduce((a, b) => a.count > b.count ? a : b, { month: "—", count: 0 });
 
-  // Category breakdown
-  const categoryBreakdown = categories.filter((c) => c !== "Todos").map((cat) => ({
-    category: cat,
-    count: books.filter((b) => b.status === "lido" && b.category === cat).length,
-  })).filter((c) => c.count > 0).sort((a, b) => b.count - a.count);
+    const userCategories = Array.from(
+      new Set([
+        ...categories.filter(c => c !== "Todos"),
+        ...books.filter(b => b.status === "lido" && b.category).map(b => b.category!),
+      ])
+    );
 
-  const statCards = [
-    { icon: BookOpen, label: "Livros Lidos", value: booksRead, sub: `em ${yearFilter}` },
-    { icon: TrendingUp, label: "Páginas Lidas", value: totalPages.toLocaleString(), sub: `em ${yearFilter}` },
-    { icon: Award, label: "Mês Destaque", value: bestMonth.month, sub: `${bestMonth.count} livro(s)` },
-    { icon: Target, label: "Nota Média", value: avgRating, sub: "de 5 estrelas" },
-  ];
+    const cBreakdown = userCategories
+      .map((cat) => ({
+        category: cat,
+        count: books.filter((b) => b.status === "lido" && b.category === cat).length,
+      }))
+      .filter((c) => c.count > 0)
+      .sort((a, b) => b.count - a.count);
+
+    const cards = [
+      { icon: BookOpen, label: "Livros Lidos", value: readCount, sub: `em ${yearFilter}` },
+      { icon: TrendingUp, label: "Páginas Lidas", value: pages.toLocaleString(), sub: `em ${yearFilter}` },
+      { icon: Award, label: "Mês Destaque", value: bMonth.month, sub: `${bMonth.count} livro(s)` },
+      { icon: Target, label: "Nota Média", value: avg, sub: "de 5 estrelas" },
+    ];
+
+    return {
+      filteredRead,
+      booksRead: readCount,
+      totalPages: pages,
+      avgRating: avg,
+      monthlyStats: mStats,
+      bestMonth: bMonth,
+      categoryBreakdown: cBreakdown,
+      statCards: cards,
+    };
+  }, [books, categoryFilter, yearFilter]);
 
   return (
     <div className="space-y-6 animate-fade-in">
