@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 export interface GoogleBookVolumeInfo {
   title: string;
@@ -46,51 +46,71 @@ export const searchGoogleBooks = async (
     }
   } catch {}
 
-  // 3. Try Supabase Edge Function first
-  try {
-    const { data, error: fnError } = await supabase.functions.invoke("google-books-search", {
-      body: { query: cleanQuery, maxResults },
-    });
+  const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY?.trim();
 
-    if (!fnError && data?.items && Array.isArray(data.items)) {
-      const items = sanitizeGoogleBooks(data.items);
-      saveToCache(cacheKey, items);
-      return { items };
-    }
-  } catch (e) {
-    console.warn("Supabase edge function search unavailable, falling back to direct API:", e);
-  }
-
-  // 4. Fallback: Direct Google Books API call
+  // 3. Primary: Direct Google Books API call with VITE_GOOGLE_BOOKS_API_KEY
   try {
-    const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY;
-    let url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
-      cleanQuery
-    )}&maxResults=${Math.min(Math.max(maxResults, 1), 40)}&printType=books`;
+    const limit = Math.min(Math.max(maxResults, 1), 40);
+    let url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(cleanQuery)}&maxResults=${limit}`;
     
     if (apiKey) {
-      url += `&key=${apiKey.trim()}`;
+      url += `&key=${apiKey}`;
     }
 
     const res = await fetch(url);
-    if (!res.ok) {
-      if (res.status === 429) {
-        return { items: [], error: "Muitas buscas em pouco tempo. Aguarde alguns instantes." };
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.items && Array.isArray(data.items) && data.items.length > 0) {
+        const items = sanitizeGoogleBooks(data.items);
+        saveToCache(cacheKey, items);
+        return { items };
       }
-      if (res.status === 403) {
-        return { items: [], error: "Limite da API do Google Books atingido. Adicione uma chave no .env ou use o modo manual." };
-      }
-      return { items: [], error: `Erro na busca (${res.status}).` };
+    } else {
+      console.warn(`Google Books API response status: ${res.status}. Falling back to Open Library.`);
     }
-
-    const data = await res.json();
-    const items = sanitizeGoogleBooks(data?.items || []);
-    saveToCache(cacheKey, items);
-    return { items };
-  } catch (err: any) {
-    console.error("Direct Google Books search error:", err);
-    return { items: [], error: "Erro de conexão ao buscar livros. Verifique sua internet." };
+  } catch (err) {
+    console.warn("Direct Google Books search error, trying fallbacks:", err);
   }
+
+  // 4. Secondary: Try Supabase Edge Function if Supabase is properly configured
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("google-books-search", {
+        body: { query: cleanQuery, maxResults },
+      });
+
+      if (!fnError && data?.items && Array.isArray(data.items) && data.items.length > 0) {
+        const items = sanitizeGoogleBooks(data.items);
+        saveToCache(cacheKey, items);
+        return { items };
+      }
+    } catch (e) {
+      console.warn("Supabase edge function search unavailable:", e);
+    }
+  }
+
+  // 5. Fallback Resilience: Open Library Search API (Free, No API key needed, never rate-limited)
+  try {
+    const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(cleanQuery)}&limit=${Math.min(maxResults, 20)}`;
+    const olRes = await fetch(olUrl);
+    if (olRes.ok) {
+      const olData = await olRes.json();
+      if (olData?.docs && Array.isArray(olData.docs) && olData.docs.length > 0) {
+        const items = sanitizeOpenLibrary(olData.docs);
+        saveToCache(cacheKey, items);
+        return { items };
+      }
+    }
+  } catch (olErr) {
+    console.warn("Open Library fallback search failed:", olErr);
+  }
+
+  return {
+    items: [],
+    error: apiKey
+      ? "Nenhum livro encontrado para esta busca."
+      : "Busca limitada pelo Google. Configure VITE_GOOGLE_BOOKS_API_KEY no seu ambiente para máxima velocidade.",
+  };
 };
 
 const sanitizeGoogleBooks = (rawItems: any[]): GoogleBookItem[] => {
@@ -107,6 +127,25 @@ const sanitizeGoogleBooks = (rawItems: any[]): GoogleBookItem[] => {
         description: v.description || "",
         pageCount: v.pageCount || 0,
         categories: v.categories || [],
+        imageLinks: secureCover ? { thumbnail: secureCover, smallThumbnail: secureCover } : undefined,
+      },
+    };
+  });
+};
+
+const sanitizeOpenLibrary = (docs: any[]): GoogleBookItem[] => {
+  return docs.map((doc) => {
+    const coverId = doc.cover_i;
+    const secureCover = coverId ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg` : "";
+
+    return {
+      id: doc.key || String(Math.random()),
+      volumeInfo: {
+        title: doc.title || "Sem título",
+        authors: doc.author_name || ["Autor desconhecido"],
+        description: doc.first_sentence?.[0] || "",
+        pageCount: doc.number_of_pages_median || 0,
+        categories: doc.subject?.slice(0, 3) || [],
         imageLinks: secureCover ? { thumbnail: secureCover, smallThumbnail: secureCover } : undefined,
       },
     };
