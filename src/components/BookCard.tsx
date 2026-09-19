@@ -2,6 +2,7 @@ import { memo } from "react";
 import { Star, Bookmark } from "lucide-react";
 import type { Book } from "@/data/mockBooks";
 import { motion } from "framer-motion";
+import RatingStars from "@/components/RatingStars";
 
 interface BookCardProps {
   book: Book;
@@ -88,15 +89,8 @@ const BookCard = memo(({ book, onClick }: BookCardProps) => {
 
           {/* Rating Stars */}
           {book.rating > 0 && (
-            <div className="flex items-center gap-0.5 mt-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Star
-                  key={i}
-                  className={`w-3.5 h-3.5 ${
-                    i < book.rating ? "fill-gold text-gold" : "text-border"
-                  }`}
-                />
-              ))}
+            <div className="mt-2">
+              <RatingStars value={book.rating} size="sm" showValue readOnly />
             </div>
           )}
 

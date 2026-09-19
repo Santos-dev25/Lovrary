@@ -4,9 +4,7 @@ import { motion } from "framer-motion";
 
 const WelcomeBanner = () => {
   const { books, readingGoal } = useBooks();
-  const booksReadThisYear = books.filter(
-    (b) => b.status === "lido" && (!b.dateFinished || b.dateFinished?.startsWith(String(readingGoal.year)))
-  ).length;
+  const booksReadThisYear = readingGoal.current;
   const booksReading = books.filter((b) => b.status === "lendo").length;
 
   return (

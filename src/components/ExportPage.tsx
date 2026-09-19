@@ -4,6 +4,7 @@ import { Download, Image, Star, Quote, FileText, Loader2, Sparkles } from "lucid
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { toPng } from "html-to-image";
+import RatingStars from "@/components/RatingStars";
 
 /**
  * Converte URLs externas de imagens em Base64 Data URL local
@@ -253,11 +254,11 @@ const ExportPage = () => {
                   </div>
                   <h3 className="font-display font-bold text-xl text-white leading-tight px-2">{selectedBook.title}</h3>
                   <p className="text-sm text-white/80 mt-1">{selectedBook.author}</p>
-                  <div className="flex justify-center gap-1 mt-3">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className={`w-4 h-4 ${i < selectedBook.rating ? "fill-yellow-400 text-yellow-400" : "text-white/20"}`} />
-                    ))}
-                  </div>
+                  {selectedBook.rating > 0 && (
+                    <div className="flex justify-center mt-3">
+                      <RatingStars value={selectedBook.rating} size="md" showValue readOnly />
+                    </div>
+                  )}
                 </div>
 
                 {selectedBook.review && (

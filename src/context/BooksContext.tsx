@@ -132,7 +132,25 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
       return JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
     } catch { return []; }
   });
-  const [readingGoalState, setReadingGoal] = useState({ year: new Date().getFullYear(), target: 12, current: 0 });
+  const [readingGoalConfig, setReadingGoalConfig] = useState({ year: new Date().getFullYear(), target: 12 });
+
+  // Cálculo reativo e instantâneo dos livros lidos no ano da meta (sem necessidade de F5)
+  const booksReadThisYear = useMemo(() => {
+    return books.filter((b) => {
+      if (b.status !== "lido") return false;
+      if (b.dateFinished) {
+        const d = new Date(b.dateFinished);
+        return !isNaN(d.getTime()) && d.getFullYear() === readingGoalConfig.year;
+      }
+      return true;
+    }).length;
+  }, [books, readingGoalConfig.year]);
+
+  const readingGoal = useMemo(() => ({
+    year: readingGoalConfig.year,
+    target: readingGoalConfig.target,
+    current: booksReadThisYear,
+  }), [readingGoalConfig, booksReadThisYear]);
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -164,10 +182,9 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
       }
       setBooks(guestBooks);
       const year = new Date().getFullYear();
-      const readCount = guestBooks.filter(b => b.status === "lido").length;
       const storedGoal = localStorage.getItem(GUEST_GOAL_KEY);
       const target = storedGoal ? Number(storedGoal) : 12;
-      setReadingGoal({ year, target, current: readCount });
+      setReadingGoalConfig({ year, target });
     } catch (e) {
       console.error("Erro ao carregar dados de visitante:", e);
       setBooks(mockBooks);
@@ -211,11 +228,10 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
       setBooks(allBooks);
 
       const year = new Date().getFullYear();
-      const readCount = allBooks.filter(b => b.status === "lido").length;
       if (goalData && typeof (goalData as { goal?: number }).goal === "number") {
-        setReadingGoal({ year, target: (goalData as { goal: number }).goal, current: readCount });
+        setReadingGoalConfig({ year, target: (goalData as { goal: number }).goal });
       } else {
-        setReadingGoal({ year, target: 12, current: readCount });
+        setReadingGoalConfig({ year, target: 12 });
       }
     } catch (err) {
       console.error("Erro ao carregar dados do Supabase:", err);
@@ -573,7 +589,6 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     const total = book?.totalPages || 0;
     const today = new Date().toISOString().slice(0, 10);
     updateBook(bookId, { status: "lido", currentPage: total, dateFinished: book?.dateFinished || today });
-    setReadingGoal(prev => ({ ...prev, current: prev.current + 1 }));
     toast.success("Parabéns por finalizar o livro! 🎉");
   }, [updateBook]);
 
@@ -606,7 +621,7 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
 
   const setGoalTarget = useCallback(async (target: number) => {
     const safeTarget = Math.max(1, Math.min(parseInt(String(target)) || 12, 1000));
-    setReadingGoal(prev => ({ ...prev, target: safeTarget }));
+    setReadingGoalConfig(prev => ({ ...prev, target: safeTarget }));
     toast.success("Meta atualizada!");
 
     if (isGuest || userId === "guest") {
@@ -675,13 +690,13 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
 
   const contextValue = useMemo(() => ({
     books, loading, isGuest, loginAsGuest, logoutGuest, addBook, readingQueue,
-    readingGoal: readingGoalState, selectedBook, setSelectedBook, updateBook,
+    readingGoal, selectedBook, setSelectedBook, updateBook,
     addNote, updateNote, deleteNote, moveToAcervo, startReading, finishReading, updateProgress,
     addToQueue, removeFromQueue, reorderQueue, setGoalTarget, addReview, addQuote,
     removeQuote, setRating, setSubRating, addVibe, removeVibe, deleteBook,
   }), [
     books, loading, isGuest, loginAsGuest, logoutGuest, addBook, readingQueue,
-    readingGoalState, selectedBook, setSelectedBook, updateBook,
+    readingGoal, selectedBook, setSelectedBook, updateBook,
     addNote, updateNote, deleteNote, moveToAcervo, startReading, finishReading, updateProgress,
     addToQueue, removeFromQueue, reorderQueue, setGoalTarget, addReview, addQuote,
     removeQuote, setRating, setSubRating, addVibe, removeVibe, deleteBook,

@@ -9,22 +9,37 @@ const MONTH_NAMES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Se
 const StatsPanel = () => {
   const { books, readingGoal: goal } = useBooks();
 
-  const { booksRead, booksReading, goalProgress, pagesRead, monthlyStats, bestMonth, statCards } = useMemo(() => {
-    const booksReadCount = books.filter((b) => b.status === "lido").length;
-    const booksReadingCount = books.filter((b) => b.status === "lendo").length;
-    const progress = goal.target > 0 ? Math.round((goal.current / goal.target) * 100) : 0;
+  const { booksReadInYear, totalBooksRead, booksReading, goalProgress, pagesRead, monthlyStats, bestMonth, statCards, tabCounts } = useMemo(() => {
+    // 1. Livros lidos no ano da meta (sincronizado 100% com Registros de Leitura)
+    const readInYear = books.filter((b) => {
+      if (b.status !== "lido") return false;
+      if (b.dateFinished) {
+        const d = new Date(b.dateFinished);
+        return !isNaN(d.getTime()) && d.getFullYear() === goal.year;
+      }
+      return true;
+    }).length;
 
+    // Total de livros lidos histórico
+    const totalRead = books.filter((b) => b.status === "lido").length;
+    const booksReadingCount = books.filter((b) => b.status === "lendo").length;
+
+    // Porcentagem da Meta Anual: (Livros lidos no ano / Meta definida) * 100
+    const progress = goal.target > 0 ? Math.round((readInYear / goal.target) * 100) : 0;
+
+    // Total de Páginas Lidas: Soma das páginas dos livros 'lidos' + páginas atuais dos livros 'lendo'
     const totalPages = books.reduce((sum, b) => {
       if (b.status === "lido") return sum + (b.totalPages || 0);
       if (b.status === "lendo") return sum + (b.currentPage || 0);
       return sum;
     }, 0);
 
+    // Leituras por Mês no ano da meta
     const mStats = MONTH_NAMES.map((month, i) => {
       const count = books.filter((b) => {
         if (b.status !== "lido" || !b.dateFinished) return false;
         const d = new Date(b.dateFinished);
-        return !isNaN(d.getTime()) && d.getMonth() === i;
+        return !isNaN(d.getTime()) && d.getFullYear() === goal.year && d.getMonth() === i;
       }).length;
       return { month, count };
     });
@@ -35,25 +50,74 @@ const StatsPanel = () => {
     );
 
     const cards = [
-      { icon: BookOpen, label: "Livros Lidos", value: booksReadCount, sub: `em ${goal.year}` },
-      { icon: FileText, label: "Páginas Lidas", value: totalPages.toLocaleString("pt-BR"), sub: "total acumulado" },
-      { icon: TrendingUp, label: "Lendo Agora", value: booksReadingCount, sub: "em andamento" },
-      { icon: Award, label: "Mês Destaque", value: bMonth.month, sub: `${bMonth.count} livro(s)` },
+      {
+        icon: BookOpen,
+        label: "Livros Lidos",
+        value: readInYear,
+        sub: totalRead !== readInYear ? `em ${goal.year} (${totalRead} no total)` : `em ${goal.year}`,
+      },
+      {
+        icon: FileText,
+        label: "Páginas Lidas",
+        value: totalPages.toLocaleString("pt-BR"),
+        sub: "lidos + em andamento",
+      },
+      {
+        icon: TrendingUp,
+        label: "Lendo Agora",
+        value: booksReadingCount,
+        sub: "em andamento",
+      },
+      {
+        icon: Award,
+        label: "Mês Destaque",
+        value: bMonth.month,
+        sub: bMonth.count > 0 ? `${bMonth.count} livro(s) em ${goal.year}` : `sem leituras em ${goal.year}`,
+      },
     ];
 
+    const tabs = {
+      tenho: books.filter((b) => b.ownership === "tenho").length,
+      pretendo: books.filter((b) => b.ownership === "pretendo").length,
+      lendo: books.filter((b) => b.status === "lendo").length,
+      lido: totalRead,
+    };
+
     return {
-      booksRead: booksReadCount,
+      booksReadInYear: readInYear,
+      totalBooksRead: totalRead,
       booksReading: booksReadingCount,
       goalProgress: progress,
       pagesRead: totalPages,
       monthlyStats: mStats,
       bestMonth: bMonth,
       statCards: cards,
+      tabCounts: tabs,
     };
   }, [books, goal]);
 
   return (
     <div className="space-y-6">
+      {/* Contagem exata por abas ('tenho', 'pretendo', 'lendo', 'lido') */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-2xl bg-secondary/30 border border-border">
+        <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-card border border-border/60 shadow-2xs">
+          <span className="text-xs text-muted-foreground font-medium">Tenho</span>
+          <span className="font-numeric text-xs font-bold text-foreground">{tabCounts.tenho}</span>
+        </div>
+        <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-card border border-border/60 shadow-2xs">
+          <span className="text-xs text-muted-foreground font-medium">Pretendo</span>
+          <span className="font-numeric text-xs font-bold text-foreground">{tabCounts.pretendo}</span>
+        </div>
+        <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-card border border-border/60 shadow-2xs">
+          <span className="text-xs text-muted-foreground font-medium">Lendo</span>
+          <span className="font-numeric text-xs font-bold text-marsala">{tabCounts.lendo}</span>
+        </div>
+        <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-card border border-border/60 shadow-2xs">
+          <span className="text-xs text-muted-foreground font-medium">Lidos</span>
+          <span className="font-numeric text-xs font-bold text-foreground">{tabCounts.lido}</span>
+        </div>
+      </div>
+
       {/* 4 Balanced Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
         {statCards.map((stat, i) => {
@@ -109,16 +173,16 @@ const StatsPanel = () => {
             </div>
 
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{goal.current} lidos</span>
+              <span>{booksReadInYear} lidos em {goal.year}</span>
               <span>Alvo: {goal.target} livros</span>
             </div>
           </div>
 
           <div className="pt-4 border-t border-border/60 mt-4">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              {goal.target - goal.current > 0
-                ? `Faltam ${goal.target - goal.current} livro(s) para atingir sua meta deste ano. Continue no ritmo!`
-                : "🎉 Parabéns! Você concluiu sua meta de leitura para este ano!"}
+              {goal.target - booksReadInYear > 0
+                ? `Faltam ${goal.target - booksReadInYear} livro(s) para atingir sua meta de ${goal.year}. Continue no ritmo!`
+                : `🎉 Parabéns! Você concluiu sua meta de leitura para ${goal.year}!`}
             </p>
           </div>
         </motion.div>

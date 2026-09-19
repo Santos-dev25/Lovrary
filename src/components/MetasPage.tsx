@@ -8,14 +8,7 @@ const MetasPage = () => {
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState(String(readingGoal.target));
 
-  const booksReadThisYear = books.filter(b => {
-    if (b.status !== "lido") return false;
-    if (b.dateFinished) {
-      const d = new Date(b.dateFinished);
-      return !isNaN(d.getTime()) ? d.getFullYear() === readingGoal.year : true;
-    }
-    return true;
-  }).length;
+  const booksReadThisYear = readingGoal.current;
   const goalProgress = readingGoal.target > 0 ? Math.round((booksReadThisYear / readingGoal.target) * 100) : 0;
   const remaining = Math.max(0, readingGoal.target - booksReadThisYear);
 

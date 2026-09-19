@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   BookOpen, BarChart3, Heart, NotebookPen, Target, Moon, Sun, Library, Bookmark,
   ChevronLeft, ChevronRight, Download, Star, PlusCircle, LogOut, X, LayoutDashboard, Sparkles
@@ -40,7 +40,14 @@ const Sidebar = ({
 }: SidebarProps) => {
   const { books, isGuest, logoutGuest } = useBooks();
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const readingCount = books.filter(b => b.status === "lendo").length;
+
+  // Contagem exata em tempo real por abas ('tenho', 'pretendo', 'lendo', 'lido')
+  const tabCounts = useMemo(() => ({
+    acervo: books.filter(b => b.ownership === "tenho").length,
+    wishlist: books.filter(b => b.ownership === "pretendo").length,
+    lendo: books.filter(b => b.status === "lendo").length,
+    stats: books.filter(b => b.status === "lido").length,
+  }), [books]);
 
   // Lock body scroll when mobile drawer is open
   useEffect(() => {
@@ -135,11 +142,34 @@ const Sidebar = ({
                   >
                     <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-marsala" : "text-muted-foreground"}`} />
                     {(!collapsed || mobileOpen) && <span>{item.label}</span>}
-                    {(!collapsed || mobileOpen) && item.id === "lendo" && readingCount > 0 && (
-                      <span className="ml-auto bg-marsala/15 text-marsala text-xs px-2 py-0.5 rounded-full font-semibold">
-                        {readingCount}
-                      </span>
-                    )}
+                    {(!collapsed || mobileOpen) && (() => {
+                      const count =
+                        item.id === "acervo"
+                          ? tabCounts.acervo
+                          : item.id === "lendo"
+                          ? tabCounts.lendo
+                          : item.id === "wishlist"
+                          ? tabCounts.wishlist
+                          : item.id === "stats"
+                          ? tabCounts.stats
+                          : undefined;
+
+                      if (count === undefined || count === 0) return null;
+
+                      return (
+                        <span
+                          className={`ml-auto text-[11px] px-2 py-0.5 rounded-full font-numeric font-semibold ${
+                            isActive
+                              ? "bg-marsala text-primary-foreground"
+                              : item.id === "lendo"
+                              ? "bg-marsala/15 text-marsala"
+                              : "bg-secondary text-muted-foreground"
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      );
+                    })()}
                   </button>
                 </li>
               );

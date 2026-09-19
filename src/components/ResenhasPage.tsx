@@ -1,6 +1,7 @@
 import { useBooks } from "@/context/BooksContext";
-import { Star, Quote, BookOpen } from "lucide-react";
+import { Quote, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
+import RatingStars from "@/components/RatingStars";
 
 const ResenhasPage = () => {
   const { books, setSelectedBook } = useBooks();
@@ -34,11 +35,11 @@ const ResenhasPage = () => {
                 <div className="flex-1 min-w-0">
                   <h3 translate="no" className="notranslate font-display font-semibold text-foreground">{book.title}</h3>
                   <p translate="no" className="notranslate text-xs text-muted-foreground">{book.author}</p>
-                  <div className="flex items-center gap-0.5 mt-1">
-                    {Array.from({ length: 5 }).map((_, j) => (
-                      <Star key={j} className={`w-3.5 h-3.5 ${j < book.rating ? "fill-gold text-gold" : "text-muted"}`} />
-                    ))}
-                  </div>
+                  {book.rating > 0 && (
+                    <div className="mt-1">
+                      <RatingStars value={book.rating} size="sm" showValue readOnly />
+                    </div>
+                  )}
 
                   {book.review && (
                     <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{book.review}</p>

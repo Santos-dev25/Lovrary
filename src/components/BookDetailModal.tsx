@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useBooks } from "@/context/BooksContext";
 import { vibeOptions, categoryOptions, mockBooks } from "@/data/mockBooks";
 import { searchGoogleBooks } from "@/lib/googleBooks";
+import RatingStars from "@/components/RatingStars";
 import {
   X, Star, Bookmark, Quote, Plus, Trash2, CheckCircle, Play, Tag,
   Calendar, Sparkles, PlusCircle, Feather, BookOpen, MoreHorizontal,
@@ -321,32 +322,18 @@ export const BookDetailModal = () => {
 
               {/* 2. Star Rating Bar */}
               <div className="space-y-1 w-full flex flex-col items-center">
-                <div className="flex items-center gap-1.5 py-1 px-3 rounded-full bg-card border border-border shadow-2xs">
-                  <div className="flex items-center gap-0.5 sm:gap-1">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => {
-                          setRating(book.id, i + 1);
-                          toast.success(`Nota atualizada para ${i + 1} estrelas! ⭐`);
-                        }}
-                        className="min-w-[40px] min-h-[40px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center p-1 hover:scale-115 active:scale-95 transition-transform touch-manipulation"
-                        title={`Avaliar ${i + 1} estrelas`}
-                        aria-label={`Avaliar ${i + 1} estrelas`}
-                      >
-                        <Star
-                          className={`w-4 h-4 sm:w-4.5 sm:h-4.5 transition-colors ${
-                            i < book.rating ? "fill-gold text-gold" : "text-muted-foreground/30 hover:text-gold/60"
-                          }`}
-                        />
-                      </button>
-                    ))}
-                    <span className="text-xs font-numeric font-bold text-foreground ml-1">
-                      {book.rating ? `${book.rating}.0` : "—"}
-                    </span>
-                  </div>
+                <div className="flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-card border border-border shadow-2xs">
+                  <RatingStars
+                    value={book.rating || 0}
+                    onChange={(newRating) => {
+                      setRating(book.id, newRating);
+                      toast.success(`Nota atualizada para ${newRating.toFixed(1)} estrelas! ⭐`);
+                    }}
+                    size="md"
+                    showValue
+                  />
                 </div>
-                <span className="text-[11px] text-muted-foreground">Avaliação pessoal</span>
+                <span className="text-[11px] text-muted-foreground">Avaliação pessoal (0.5 a 5.0 estrelas)</span>
               </div>
 
               {/* 3. Reading Progress Ruler (when reading or has progress) */}
@@ -486,7 +473,16 @@ export const BookDetailModal = () => {
                         <button
                           onClick={() => {
                             const nextStatus = book.status === "lido" ? "nao-lido" : "lido";
-                            updateBook(book.id, { status: nextStatus });
+                            const today = new Date().toISOString().slice(0, 10);
+                            updateBook(book.id, {
+                              status: nextStatus,
+                              ...(nextStatus === "lido"
+                                ? {
+                                    dateFinished: book.dateFinished || today,
+                                    currentPage: book.currentPage > 0 ? book.currentPage : (book.totalPages || 0),
+                                  }
+                                : {}),
+                            });
                             setActionsMenuOpen(false);
                             toast.success(`Status alterado para: ${nextStatus === "lido" ? "Lido" : "Não lido"}`);
                           }}
@@ -853,17 +849,12 @@ export const BookDetailModal = () => {
                             autoFocus
                           />
                           <div className="flex items-center gap-1 justify-center">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <button
-                                key={i}
-                                type="button"
-                                onClick={() => setNewSubRating(i + 1)}
-                                className="min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center p-1 rounded-lg hover:bg-secondary/60 transition-colors touch-manipulation"
-                                title={`Nota ${i + 1}`}
-                              >
-                                <Star className={`w-4 h-4 ${i < newSubRating ? "fill-gold text-gold" : "text-muted-foreground/30"}`} />
-                              </button>
-                            ))}
+                            <RatingStars
+                              value={newSubRating}
+                              onChange={setNewSubRating}
+                              size="sm"
+                              showValue
+                            />
                           </div>
                           <div className="flex items-center gap-1">
                             <button
@@ -893,20 +884,12 @@ export const BookDetailModal = () => {
                               {sub.label}
                             </span>
                             <div className="flex items-center gap-1 shrink-0">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <button
-                                  key={i}
-                                  onClick={() => setSubRating(book.id, sub.label, i + 1)}
-                                  title={`Nota ${i + 1}`}
-                                  className="min-w-[32px] min-h-[32px] sm:min-w-[28px] sm:min-h-[28px] flex items-center justify-center p-1 hover:scale-110 active:scale-95 transition-transform touch-manipulation"
-                                >
-                                  <Star
-                                    className={`w-3.5 h-3.5 transition-colors ${
-                                      i < sub.value ? "fill-gold text-gold" : "text-muted-foreground/30 hover:text-gold/50"
-                                    }`}
-                                  />
-                                </button>
-                              ))}
+                              <RatingStars
+                                value={sub.value}
+                                onChange={(val) => setSubRating(book.id, sub.label, val)}
+                                size="xs"
+                                showValue
+                              />
                               <button
                                 onClick={() =>
                                   updateBook(book.id, {

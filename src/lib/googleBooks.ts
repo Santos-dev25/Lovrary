@@ -62,23 +62,45 @@ export const sanitizeCoverUrl = (url?: string): string => {
   return "";
 };
 
+export interface SearchGoogleBooksOptions {
+  maxResults?: number;
+  startIndex?: number;
+  searchType?: "normal" | "deep";
+}
+
+const SUMMARY_PATTERNS = [
+  /summary\s+of/i,
+  /study\s+guide\s+for/i,
+  /resumo\s+de/i,
+  /an[aá]lise\s+de/i,
+  /workbook\s+for/i,
+  /guia\s+de\s+estudo/i,
+  /resenha\s+de/i,
+];
+
 /**
- * Busca resiliente e rate-limited na Google Books API com fallback para Open Library.
+ * Busca resiliente e rate-limited na Google Books API com suporte a busca Normal, Aprofundada e Paginação.
  */
 export const searchGoogleBooks = async (
   query: string,
-  maxResults = 20
-): Promise<{ items: GoogleBookItem[]; error?: string }> => {
-  // 1. Sanitização e validação de tamanho de query (Prevenção de DoS e injeção de parâmetros)
+  optionsOrMaxResults: number | SearchGoogleBooksOptions = 20
+): Promise<{ items: GoogleBookItem[]; totalItems?: number; error?: string }> => {
+  const options: SearchGoogleBooksOptions =
+    typeof optionsOrMaxResults === "number"
+      ? { maxResults: optionsOrMaxResults }
+      : optionsOrMaxResults || {};
+
   const cleanQuery = (query || "").trim().slice(0, 120);
   if (cleanQuery.length < 2) {
-    return { items: [] };
+    return { items: [], totalItems: 0 };
   }
 
-  const safeLimit = Math.min(Math.max(Number(maxResults) || 20, 1), 40);
-  const cacheKey = `${cleanQuery.toLowerCase()}_${safeLimit}`;
+  const safeLimit = Math.min(Math.max(Number(options.maxResults) || 20, 1), 40);
+  const startIndex = Math.max(0, Number(options.startIndex) || 0);
+  const searchType = options.searchType || "normal";
+  const cacheKey = `${searchType}_${cleanQuery.toLowerCase()}_${safeLimit}_${startIndex}`;
 
-  // 2. Checagem de Cache em Memória com TTL
+  // 1. Checagem de Cache em Memória com TTL
   const now = Date.now();
   if (cache.has(cacheKey)) {
     const entry = cache.get(cacheKey)!;
@@ -88,7 +110,7 @@ export const searchGoogleBooks = async (
     cache.delete(cacheKey);
   }
 
-  // 3. Checagem de SessionStorage com TTL
+  // 2. Checagem de SessionStorage com TTL
   try {
     const cachedRaw = sessionStorage.getItem(`gbooks_${cacheKey}`);
     if (cachedRaw) {
@@ -100,13 +122,13 @@ export const searchGoogleBooks = async (
     }
   } catch {}
 
-  // 4. Deduplicação de requisições concorrentes idênticas (In-Flight Caching)
+  // 3. Deduplicação de requisições concorrentes idênticas (In-Flight Caching)
   if (inFlightRequests.has(cacheKey)) {
     return inFlightRequests.get(cacheKey)!;
   }
 
-  // 5. Execução protegida por Rate Limiter
-  const requestPromise = (async (): Promise<{ items: GoogleBookItem[]; error?: string }> => {
+  // 4. Execução protegida por Rate Limiter
+  const requestPromise = (async (): Promise<{ items: GoogleBookItem[]; totalItems?: number; error?: string }> => {
     if (!checkRateLimit()) {
       return {
         items: [],
@@ -116,53 +138,118 @@ export const searchGoogleBooks = async (
 
     const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY?.trim();
 
-    // Tentativa 1: Google Books API direta com chave
-    try {
-      let url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(cleanQuery)}&maxResults=${safeLimit}`;
-      if (apiKey) {
-        url += `&key=${encodeURIComponent(apiKey)}`;
-      }
-
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.items && Array.isArray(data.items) && data.items.length > 0) {
-          const items = sanitizeGoogleBooks(data.items);
-          saveToCache(cacheKey, items);
-          return { items };
+    // -------------------------------------------------------------
+    // MODO NORMAL (FOCO EM VELOCIDADE MÁXIMA E RESPOSTA DIRETA)
+    // -------------------------------------------------------------
+    if (searchType === "normal") {
+      try {
+        let url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(cleanQuery)}&maxResults=${safeLimit}&startIndex=${startIndex}`;
+        if (apiKey) {
+          url += `&key=${encodeURIComponent(apiKey)}`;
         }
+
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.items && Array.isArray(data.items) && data.items.length > 0) {
+            const items = sanitizeGoogleBooks(data.items);
+            saveToCache(cacheKey, items);
+            return { items, totalItems: Number(data.totalItems) || items.length };
+          }
+        }
+      } catch (err) {
+        console.warn("[Google Books Normal] Falha na chamada direta, tentando contingência:", err);
       }
-    } catch (err) {
-      console.warn("[Google Books] Falha na chamada direta, tentando contingência:", err);
     }
 
+    // -------------------------------------------------------------
+    // MODO APROFUNDADO (FOCO EM PRECISÃO, INTITLE E FILTROS SANITIZADOS)
+    // -------------------------------------------------------------
+    if (searchType === "deep") {
+      try {
+        // a) Query direcionada
+        let url = `https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(cleanQuery)}&printType=books&langRestrict=pt&maxResults=${safeLimit}&startIndex=${startIndex}`;
+        if (apiKey) {
+          url += `&key=${encodeURIComponent(apiKey)}`;
+        }
+
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.items && Array.isArray(data.items) && data.items.length > 0) {
+            const sanitized = sanitizeGoogleBooks(data.items);
+
+            // b) Sanitização no Frontend: descarta resumos/guias
+            const filtered = sanitized.filter((item) => {
+              const title = item.volumeInfo.title || "";
+              const desc = item.volumeInfo.description || "";
+              return !SUMMARY_PATTERNS.some((p) => p.test(title) || p.test(desc));
+            });
+
+            // Se o filtro manteve resultados, retorna imediatamente
+            if (filtered.length > 0) {
+              saveToCache(cacheKey, filtered);
+              return { items: filtered, totalItems: Number(data.totalItems) || filtered.length };
+            }
+          }
+        }
+
+        // c) Regra de Segurança: se o filtro ou a query direcionada zerar resultados,
+        // faz fallback automático para a busca normal e ordena por livros com capa e páginas
+        console.info("[Google Books Deep] Fallback automático para busca normal...");
+        const fallbackRes = await searchGoogleBooks(query, {
+          maxResults: safeLimit,
+          startIndex,
+          searchType: "normal",
+        });
+
+        if (fallbackRes.items.length > 0) {
+          const sorted = [...fallbackRes.items].sort((a, b) => {
+            const aCover = Boolean(a.volumeInfo.imageLinks?.thumbnail);
+            const bCover = Boolean(b.volumeInfo.imageLinks?.thumbnail);
+            if (aCover && !bCover) return -1;
+            if (!aCover && bCover) return 1;
+            return (b.volumeInfo.pageCount || 0) - (a.volumeInfo.pageCount || 0);
+          });
+          saveToCache(cacheKey, sorted);
+          return { items: sorted, totalItems: fallbackRes.totalItems };
+        }
+      } catch (err) {
+        console.warn("[Google Books Deep] Falha na busca aprofundada, tentando contingência:", err);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // CONTINGÊNCIAS (Supabase Edge Function & Open Library)
+    // -------------------------------------------------------------
     // Tentativa 2: Supabase Edge Function se configurada
     if (isSupabaseConfigured) {
       try {
         const { data, error: fnError } = await supabase.functions.invoke("google-books-search", {
-          body: { query: cleanQuery, maxResults: safeLimit },
+          body: { query: cleanQuery, maxResults: safeLimit, startIndex },
         });
 
         if (!fnError && data?.items && Array.isArray(data.items) && data.items.length > 0) {
           const items = sanitizeGoogleBooks(data.items);
           saveToCache(cacheKey, items);
-          return { items };
+          return { items, totalItems: Number(data.totalItems) || items.length };
         }
       } catch (e) {
         console.warn("[Supabase Edge Function] Indisponível:", e);
       }
     }
 
-    // Tentativa 3: Open Library Search API (Totalmente aberta, sem limites rígidos de quota)
+    // Tentativa 3: Open Library Search API (Fallback aberto)
     try {
-      const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(cleanQuery)}&limit=${Math.min(safeLimit, 20)}`;
+      const page = Math.floor(startIndex / safeLimit) + 1;
+      const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(cleanQuery)}&limit=${Math.min(safeLimit, 20)}&page=${page}`;
       const olRes = await fetch(olUrl);
       if (olRes.ok) {
         const olData = await olRes.json();
         if (olData?.docs && Array.isArray(olData.docs) && olData.docs.length > 0) {
           const items = sanitizeOpenLibrary(olData.docs);
           saveToCache(cacheKey, items);
-          return { items };
+          return { items, totalItems: Number(olData.numFound) || items.length };
         }
       }
     } catch (olErr) {

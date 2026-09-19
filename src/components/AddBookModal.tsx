@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Plus, BookOpen, Star, Loader2, PenLine } from "lucide-react";
+import { Search, Plus, BookOpen, Star, Loader2, PenLine, Zap } from "lucide-react";
 import { useBooks } from "@/context/BooksContext";
 import type { Book } from "@/data/mockBooks";
 import { searchGoogleBooks, sanitizeCoverUrl, type GoogleBookItem } from "@/lib/googleBooks";
@@ -33,6 +33,9 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GoogleBookItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [searchType, setSearchType] = useState<"normal" | "deep">("normal");
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState("");
   const [addingId, setAddingId] = useState<string | null>(null);
@@ -51,18 +54,54 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
     setLoading(true);
     setSearched(true);
     setError("");
+    setResults([]);
     try {
-      const { items, error: searchErr } = await searchGoogleBooks(query.trim(), 20);
-      if (searchErr) {
+      const { items, error: searchErr } = await searchGoogleBooks(query.trim(), {
+        maxResults: 20,
+        startIndex: 0,
+        searchType,
+      });
+      if (searchErr && items.length === 0) {
         setError(searchErr);
       }
       setResults(items);
+      setHasMore(items.length >= 20);
     } catch (err) {
       console.error("Google Books error:", err);
       setError("Erro ao buscar livros. Tente novamente ou adicione manualmente.");
       setResults([]);
+      setHasMore(false);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMoreBooks = async () => {
+    if (!query.trim() || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const nextIndex = results.length;
+      const { items, error: searchErr } = await searchGoogleBooks(query.trim(), {
+        maxResults: 20,
+        startIndex: nextIndex,
+        searchType,
+      });
+      if (items.length > 0) {
+        // Evita duplicatas se a API retornar itens já existentes
+        setResults((prev) => {
+          const existingIds = new Set(prev.map((p) => p.id));
+          const newItems = items.filter((item) => !existingIds.has(item.id));
+          return [...prev, ...newItems];
+        });
+        setHasMore(items.length >= 20);
+      } else {
+        setHasMore(false);
+      }
+    } catch (err) {
+      console.warn("Erro ao carregar mais livros:", err);
+      setHasMore(false);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -172,13 +211,46 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
 
         {mode === "search" ? (
           <>
+            {/* Search Type Selector */}
+            <div className="flex items-center justify-between gap-2 px-1 pt-1">
+              <span className="text-xs text-muted-foreground font-medium">Modo de pesquisa:</span>
+              <div className="inline-flex p-0.5 rounded-lg bg-secondary border border-border text-xs">
+                <button
+                  type="button"
+                  onClick={() => setSearchType("normal")}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                    searchType === "normal"
+                      ? "bg-card text-foreground shadow-2xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="Busca direta, extremamente rápida e leve"
+                >
+                  <Search className="w-3 h-3 text-marsala" />
+                  <span>Normal</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSearchType("deep")}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                    searchType === "deep"
+                      ? "gradient-marsala text-primary-foreground shadow-2xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="Busca direcionada por título com descarte de resumos/guias"
+                >
+                  <Zap className="w-3 h-3 text-gold" />
+                  <span>Aprofundada</span>
+                </button>
+              </div>
+            </div>
+
             {/* Search */}
             <form onSubmit={(e) => { e.preventDefault(); searchBooks(); }} className="flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Buscar no Google Books..."
+                  placeholder={searchType === "deep" ? "Buscar título exato (Aprofundada)..." : "Buscar no Google Books..."}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   maxLength={120}
@@ -284,6 +356,27 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
                   </div>
                 );
               })}
+
+              {/* Botão Carregar Mais */}
+              {!loading && !error && results.length > 0 && hasMore && (
+                <div className="pt-2 pb-2 text-center">
+                  <button
+                    type="button"
+                    onClick={loadMoreBooks}
+                    disabled={loadingMore}
+                    className="w-full py-2.5 px-4 rounded-xl border border-border bg-secondary/60 hover:bg-secondary text-xs font-semibold text-foreground transition-all flex items-center justify-center gap-2 hover:border-marsala/40 disabled:opacity-50"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-marsala" />
+                        <span>Carregando mais livros...</span>
+                      </>
+                    ) : (
+                      <span>Carregar Mais Livros</span>
+                    )}
+                  </button>
+                </div>
+              )}
 
               {!searched && !loading && !error && (
                 <div className="text-center py-12 space-y-2">
