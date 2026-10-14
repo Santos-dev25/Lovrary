@@ -33,7 +33,14 @@ coverage/
 .env.production.local
 .env*.local
 .env.*
-!.env.example
+**/.env
+**/.env.*
+**/backend/.env*
+*.pem
+*.key
+*.cert
+*.secrets
+!**/.env.example
 
 # Arquivos de cache do Bun, Vite e ESLint
 .eslintcache
