@@ -1,6 +1,22 @@
+// Declaração para suporte a TypeScript no editor (Deno runtime é injetado pelo Supabase)
+declare const Deno: {
+  serve: (handler: (req: Request) => Promise<Response> | Response) => void;
+  env: {
+    get: (key: string) => string | undefined;
+  };
+};
+
+interface SearchRequestBody {
+  query?: string;
+  maxResults?: number | string;
+  startIndex?: number | string;
+  searchType?: "normal" | "deep";
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 Deno.serve(async (req) => {
@@ -9,8 +25,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = await req.json().catch(() => ({}));
-    const rawQuery = typeof body?.query === "string" ? body.query.trim() : "";
+    const body = ((await req.json().catch(() => ({}))) || {}) as SearchRequestBody;
+    const rawQuery = typeof body.query === "string" ? body.query.trim() : "";
 
     if (!rawQuery || rawQuery.length < 2) {
       return new Response(JSON.stringify({ error: "Termo de busca inválido (mínimo de 2 caracteres)" }), {
@@ -21,7 +37,7 @@ Deno.serve(async (req) => {
 
     const apiKey = Deno.env.get("GOOGLE_BOOKS_API_KEY");
     if (!apiKey) {
-      console.error("[google-books-search] GOOGLE_BOOKS_API_KEY não configurada nos secrets.");
+      console.error("[google-books-search] GOOGLE_BOOKS_API_KEY não configurada nos secrets do Supabase.");
       return new Response(JSON.stringify({ error: "Serviço de busca temporariamente indisponível" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -40,7 +56,7 @@ Deno.serve(async (req) => {
     const url = `https://www.googleapis.com/books/v1/volumes?q=${queryParam}&maxResults=${safeMaxResults}&startIndex=${safeStartIndex}&key=${encodeURIComponent(apiKey)}`;
 
     const res = await fetch(url);
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
       console.error("[google-books-search] Google API error:", res.status, data);
