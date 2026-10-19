@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useBooks } from "@/context/BooksContext";
+import { calculateTotalPagesRead } from "@/utils/stats";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from "recharts";
 import { BookOpen, TrendingUp, Award, Target, FileText } from "lucide-react";
 import { motion } from "framer-motion";
@@ -27,12 +28,11 @@ const StatsPanel = () => {
     // Porcentagem da Meta Anual: (Livros lidos no ano / Meta definida) * 100
     const progress = goal.target > 0 ? Math.round((readInYear / goal.target) * 100) : 0;
 
-    // Total de Páginas Lidas: Soma das páginas dos livros 'lidos' + páginas atuais dos livros 'lendo'
-    const totalPages = books.reduce((sum, b) => {
-      if (b.status === "lido") return sum + (b.totalPages || 0);
-      if (b.status === "lendo") return sum + (b.currentPage || 0);
-      return sum;
-    }, 0);
+    // Total de Páginas Lidas da Dashboard:
+    // - status 'lido': totalPages do livro
+    // - status 'lendo': currentPage onde o leitor parou
+    // - status 'tenho' / 'pretendo': 0
+    const totalPages = calculateTotalPagesRead(books);
 
     // Leituras por Mês no ano da meta
     const mStats = MONTH_NAMES.map((month, i) => {
