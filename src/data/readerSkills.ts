@@ -1,4 +1,5 @@
 import { Book } from "@/data/mockBooks";
+import { calculateTotalPagesRead } from "@/utils/stats";
 
 export type SkillCategory = "habito" | "exploracao" | "journal" | "acervo";
 
@@ -41,11 +42,7 @@ export const calculateReaderSkills = (books: Book[], goalTarget = 12): {
   const ownedBooks = books.filter(b => b.ownership === "tenho");
 
   // Páginas acumuladas
-  const pagesRead = books.reduce((sum, b) => {
-    if (b.status === "lido") return sum + (b.totalPages || 0);
-    if (b.status === "lendo") return sum + (b.currentPage || 0);
-    return sum;
-  }, 0);
+  const pagesRead = calculateTotalPagesRead(books);
 
   // Anotações e citações
   const totalNotes = books.reduce((sum, b) => sum + (b.notes?.length || 0), 0);

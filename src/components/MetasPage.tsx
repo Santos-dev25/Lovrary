@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useBooks } from "@/context/BooksContext";
+import { calculateTotalPagesRead } from "@/utils/stats";
 import { Target, TrendingUp, Award, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -121,7 +122,7 @@ const MetasPage = () => {
           className="bg-card rounded-xl border border-border p-4 shadow-card">
           <Award className="w-5 h-5 text-gold mb-2" />
           <p className="text-3xl font-numeric text-foreground">
-            {books.filter(b => b.status === "lido").reduce((sum, b) => sum + (b.totalPages || 0), 0).toLocaleString()}
+            {calculateTotalPagesRead(books).toLocaleString("pt-BR")}
           </p>
           <p className="text-xs text-muted-foreground">Páginas lidas no total</p>
         </motion.div>
