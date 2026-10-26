@@ -129,7 +129,10 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
   const [books, setBooks] = useState<Book[]>([]);
   const [readingQueue, setReadingQueue] = useState<string[]>(() => {
     try {
-      return JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
+      if (localStorage.getItem(GUEST_KEY) === "true") {
+        return JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
+      }
+      return [];
     } catch { return []; }
   });
   const [readingGoalConfig, setReadingGoalConfig] = useState({ year: new Date().getFullYear(), target: 12 });
@@ -161,15 +164,22 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     booksRef.current = books;
   }, [books]);
 
+  const readingQueueRef = useRef<string[]>(readingQueue);
+  useEffect(() => {
+    readingQueueRef.current = readingQueue;
+  }, [readingQueue]);
+
   const selectedBook = useMemo(() => books.find(b => b.id === selectedBookId) || null, [books, selectedBookId]);
   const setSelectedBook = useCallback((b: Book | null) => {
     setSelectedBookId(b ? b.id : null);
   }, []);
 
-  // Persist queue locally
+  // Persistência local da fila EXCLUSIVAMENTE para o Modo Convidado / Visitante
   useEffect(() => {
-    localStorage.setItem(QUEUE_KEY, JSON.stringify(readingQueue));
-  }, [readingQueue]);
+    if (isGuest || userId === "guest") {
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(readingQueue));
+    }
+  }, [readingQueue, isGuest, userId]);
 
   // Load guest data
   const loadGuestData = useCallback(() => {
@@ -185,6 +195,10 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
       const storedGoal = localStorage.getItem(GUEST_GOAL_KEY);
       const target = storedGoal ? Number(storedGoal) : 12;
       setReadingGoalConfig({ year, target });
+
+      const storedQueue = localStorage.getItem(QUEUE_KEY);
+      const guestQueue = storedQueue ? JSON.parse(storedQueue) : ["6", "7"];
+      setReadingQueue(guestQueue);
     } catch (e) {
       console.error("Erro ao carregar dados de visitante:", e);
       setBooks(mockBooks);
@@ -213,17 +227,27 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     setSelectedBookId(null);
   }, []);
 
-  // Load from Supabase DB (com filtro defensivo por user_id)
+  // Load from Supabase DB (com filtro defensivo por user_id e migração da fila)
   const loadAll = useCallback(async (_uid: string) => {
     setLoading(true);
     try {
-      const [{ data: booksData, error: booksErr }, { data: notesData }, { data: goalData }] = await Promise.all([
+      const [
+        { data: booksData, error: booksErr },
+        { data: notesData },
+        { data: goalData },
+        { data: queueData, error: queueErr },
+      ] = await Promise.all([
         supabase.from("books").select("*").eq("user_id", _uid).order("created_at", { ascending: false }),
         supabase.from("journal_notes").select("*").eq("user_id", _uid).order("created_at", { ascending: true }),
         supabase.from("reading_goals").select("*").eq("user_id", _uid).eq("year", new Date().getFullYear()).maybeSingle(),
+        supabase.from("reading_queue").select("book_id, position").eq("user_id", _uid).order("position", { ascending: true }),
       ]);
 
       if (booksErr) throw booksErr;
+      if (queueErr) {
+        console.warn("[Lovrary] Aviso ao carregar reading_queue:", queueErr);
+      }
+
       const allBooks = (booksData || []).map(b => dbToBook(b as unknown as DbBook, (notesData || []) as unknown as DbNote[]));
       setBooks(allBooks);
 
@@ -233,6 +257,40 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setReadingGoalConfig({ year, target: 12 });
       }
+
+      // Fila vinda do banco de dados
+      let remoteQueue = (queueData || []).map(q => q.book_id);
+
+      // Migração Transparente: Se houver dados legados no localStorage, migra para o Supabase
+      try {
+        const rawLocal = localStorage.getItem(QUEUE_KEY);
+        if (rawLocal) {
+          const localQueue = JSON.parse(rawLocal);
+          if (Array.isArray(localQueue) && localQueue.length > 0) {
+            // Apenas IDs que realmente pertencem aos livros cadastrados do usuário
+            const validLocalIds = localQueue.filter(id => allBooks.some(b => b.id === id));
+            
+            // Se a fila remota do usuário ainda estava vazia mas ele tinha itens locais
+            if (remoteQueue.length === 0 && validLocalIds.length > 0) {
+              const rowsToInsert = validLocalIds.map((bookId, idx) => ({
+                user_id: _uid,
+                book_id: bookId,
+                position: idx,
+              }));
+              const { error: insertErr } = await supabase.from("reading_queue").insert(rowsToInsert);
+              if (!insertErr) {
+                remoteQueue = validLocalIds;
+              }
+            }
+          }
+          // Limpa com segurança a chave legada do localStorage após a migração
+          localStorage.removeItem(QUEUE_KEY);
+        }
+      } catch (migErr) {
+        console.warn("[Lovrary] Aviso na migração automática da fila:", migErr);
+      }
+
+      setReadingQueue(remoteQueue);
     } catch (err) {
       console.error("Erro ao carregar dados do Supabase:", err);
       toast.error("Erro ao carregar sua biblioteca em nuvem");
@@ -575,14 +633,20 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
   const moveToAcervo = useCallback((bookId: string) => {
     updateBook(bookId, { ownership: "tenho", status: "nao-lido" });
     setReadingQueue(prev => prev.filter(id => id !== bookId));
+    if (userId && !isGuest && userId !== "guest") {
+      supabase.from("reading_queue").delete().eq("user_id", userId).eq("book_id", bookId).then();
+    }
     toast.success("Livro movido para o acervo! 📚");
-  }, [updateBook]);
+  }, [updateBook, userId, isGuest]);
 
   const startReading = useCallback((bookId: string) => {
     updateBook(bookId, { status: "lendo", ownership: "tenho", currentPage: 0 });
     setReadingQueue(prev => prev.filter(id => id !== bookId));
+    if (userId && !isGuest && userId !== "guest") {
+      supabase.from("reading_queue").delete().eq("user_id", userId).eq("book_id", bookId).then();
+    }
     toast.success("Boa leitura! 📖");
-  }, [updateBook]);
+  }, [updateBook, userId, isGuest]);
 
   const finishReading = useCallback((bookId: string) => {
     const book = booksRef.current.find(b => b.id === bookId);
@@ -602,22 +666,85 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
   }, [updateBook]);
 
   const addToQueue = useCallback((bookId: string) => {
-    setReadingQueue(prev => (prev.includes(bookId) ? prev : [...prev, bookId]));
+    const currentQueue = readingQueueRef.current;
+    if (currentQueue.includes(bookId)) return;
+
+    const newQueue = [...currentQueue, bookId];
+    setReadingQueue(newQueue);
     toast.success("Adicionado à fila de leitura!");
-  }, []);
+
+    if (isGuest || userId === "guest") {
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(newQueue));
+      return;
+    }
+    if (!userId) return;
+
+    const position = newQueue.length - 1;
+    supabase
+      .from("reading_queue")
+      .upsert({ user_id: userId, book_id: bookId, position }, { onConflict: "user_id,book_id" })
+      .then(({ error }) => {
+        if (error) {
+          console.error("Erro ao adicionar à fila no Supabase:", error);
+          toast.error("Erro ao sincronizar fila com a nuvem.");
+        }
+      });
+  }, [userId, isGuest]);
 
   const removeFromQueue = useCallback((bookId: string) => {
-    setReadingQueue(prev => prev.filter(id => id !== bookId));
-  }, []);
+    const newQueue = readingQueueRef.current.filter(id => id !== bookId);
+    setReadingQueue(newQueue);
+
+    if (isGuest || userId === "guest") {
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(newQueue));
+      return;
+    }
+    if (!userId) return;
+
+    supabase
+      .from("reading_queue")
+      .delete()
+      .eq("user_id", userId)
+      .eq("book_id", bookId)
+      .then(({ error }) => {
+        if (error) {
+          console.error("Erro ao remover da fila no Supabase:", error);
+          toast.error("Erro ao sincronizar remoção da fila.");
+        }
+      });
+  }, [userId, isGuest]);
 
   const reorderQueue = useCallback((fromIndex: number, toIndex: number) => {
-    setReadingQueue(prev => {
-      const arr = [...prev];
-      const [moved] = arr.splice(fromIndex, 1);
-      arr.splice(toIndex, 0, moved);
-      return arr;
-    });
-  }, []);
+    const arr = [...readingQueueRef.current];
+    if (fromIndex < 0 || fromIndex >= arr.length || toIndex < 0 || toIndex >= arr.length) return;
+
+    const [moved] = arr.splice(fromIndex, 1);
+    arr.splice(toIndex, 0, moved);
+    setReadingQueue(arr);
+
+    if (isGuest || userId === "guest") {
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(arr));
+      return;
+    }
+    if (!userId) return;
+
+    // Atualiza a posição de todos os itens da fila no Supabase em lote
+    const payload = arr.map((bookId, position) => ({
+      user_id: userId,
+      book_id: bookId,
+      position,
+    }));
+
+    supabase
+      .from("reading_queue")
+      .upsert(payload, { onConflict: "user_id,book_id" })
+      .then(({ error }) => {
+        if (error) {
+          console.error("Erro ao reordenar fila no Supabase:", error);
+          toast.error("Erro ao sincronizar ordem da fila.");
+        }
+      });
+  }, [userId, isGuest]);
 
   const setGoalTarget = useCallback(async (target: number) => {
     const safeTarget = Math.max(1, Math.min(parseInt(String(target)) || 12, 1000));
