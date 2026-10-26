@@ -670,6 +670,7 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     if (currentQueue.includes(bookId)) return;
 
     const newQueue = [...currentQueue, bookId];
+    readingQueueRef.current = newQueue;
     setReadingQueue(newQueue);
     toast.success("Adicionado à fila de leitura!");
 
@@ -693,6 +694,7 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
 
   const removeFromQueue = useCallback((bookId: string) => {
     const newQueue = readingQueueRef.current.filter(id => id !== bookId);
+    readingQueueRef.current = newQueue;
     setReadingQueue(newQueue);
 
     if (isGuest || userId === "guest") {
@@ -720,6 +722,7 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
 
     const [moved] = arr.splice(fromIndex, 1);
     arr.splice(toIndex, 0, moved);
+    readingQueueRef.current = arr;
     setReadingQueue(arr);
 
     if (isGuest || userId === "guest") {
