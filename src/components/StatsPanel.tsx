@@ -1,14 +1,17 @@
 import { useMemo } from "react";
 import { useBooks } from "@/context/BooksContext";
 import { calculateTotalPagesRead } from "@/utils/stats";
+import { calculateDailyHistory } from "@/utils/sessions";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from "recharts";
-import { BookOpen, TrendingUp, Award, Target, FileText } from "lucide-react";
+import { BookOpen, TrendingUp, Award, Target, FileText, Flame, Zap, Calendar, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 
 const MONTH_NAMES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 const StatsPanel = () => {
-  const { books, readingGoal: goal } = useBooks();
+  const { books, readingGoal: goal, streak, readingPace, readingSessions } = useBooks();
+
+  const dailyHistory = useMemo(() => calculateDailyHistory(readingSessions, 30), [readingSessions]);
 
   const { booksReadInYear, totalBooksRead, booksReading, goalProgress, pagesRead, monthlyStats, bestMonth, statCards, tabCounts } = useMemo(() => {
     // 1. Livros lidos no ano da meta (sincronizado 100% com Registros de Leitura)
@@ -143,13 +146,195 @@ const StatsPanel = () => {
         })}
       </div>
 
+      {/* Bloco de Hábitos Literários: Ofensiva (Streak) & Ritmo de Leitura */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Card da Ofensiva (Streak) */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18 }}
+          className="relative overflow-hidden bg-card rounded-2xl border border-border p-5 shadow-card flex flex-col justify-between"
+        >
+          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-gold/10 blur-2xl pointer-events-none" />
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-xl bg-gold/15 text-gold shadow-2xs">
+                  <Flame className="w-5 h-5 fill-gold/30" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-foreground text-sm sm:text-base">Ofensiva de Leitura</h3>
+                  <p className="text-[11px] text-muted-foreground">Constância diária de páginas lidas</p>
+                </div>
+              </div>
+              {streak.readToday ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <Sparkles className="w-3 h-3" /> Lido hoje
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                  Pendente hoje
+                </span>
+              )}
+            </div>
+
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-3xl sm:text-4xl font-numeric font-bold text-foreground tracking-tight">
+                {streak.currentStreak}
+              </span>
+              <span className="text-sm text-muted-foreground font-medium">
+                {streak.currentStreak === 1 ? "dia seguido" : "dias seguidos"}
+              </span>
+            </div>
+
+            <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+              {streak.longestStreak > 0
+                ? `Seu recorde histórico é de ${streak.longestStreak} ${streak.longestStreak === 1 ? "dia consecutivo" : "dias consecutivos"}.`
+                : "Registre seu progresso diariamente para acender e manter sua chama de leitura."}
+            </p>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>Última sessão registrada:</span>
+            <span className="font-medium text-foreground">
+              {streak.lastSessionDate
+                ? streak.lastSessionDate.split("-").reverse().join("/")
+                : "Nenhuma ainda"}
+            </span>
+          </div>
+        </motion.div>
+
+        {/* Card do Ritmo de Leitura (Pace) */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.22 }}
+          className="relative overflow-hidden bg-card rounded-2xl border border-border p-5 shadow-card flex flex-col justify-between"
+        >
+          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-marsala/10 blur-2xl pointer-events-none" />
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-xl bg-marsala/15 text-marsala shadow-2xs">
+                  <Zap className="w-5 h-5 fill-marsala/20" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-foreground text-sm sm:text-base">Ritmo Médio</h3>
+                  <p className="text-[11px] text-muted-foreground">Velocidade e cadência de leitura</p>
+                </div>
+              </div>
+              <span className="text-[11px] font-semibold text-muted-foreground">
+                Últimos 30 dias
+              </span>
+            </div>
+
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-3xl sm:text-4xl font-numeric font-bold text-foreground tracking-tight">
+                {readingPace.avgPagesPerDay}
+              </span>
+              <span className="text-sm text-muted-foreground font-medium">págs / dia ativo</span>
+            </div>
+
+            <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+              {readingPace.totalPagesInPeriod > 0
+                ? `${readingPace.totalPagesInPeriod} páginas lidas distribuídas em ${readingPace.activeDaysCount} ${readingPace.activeDaysCount === 1 ? "dia ativo" : "dias ativos"}.`
+                : "Conforme você avança nas leituras, calculamos sua velocidade média de páginas diárias."}
+            </p>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>Previsão término (livro ativo):</span>
+            <span className="font-medium text-foreground">
+              {readingPace.estimatedDaysToFinish !== null
+                ? `~${readingPace.estimatedDaysToFinish} ${readingPace.estimatedDaysToFinish === 1 ? "dia" : "dias"}`
+                : "Sem livro ativo"}
+            </span>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Gráfico de Constância Diária: Últimos 30 Dias */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.26 }}
+        className="bg-card rounded-2xl border border-border p-5 shadow-card space-y-4"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-secondary text-foreground">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-display font-bold text-foreground text-sm sm:text-base">Constância nos Últimos 30 Dias</h3>
+              <p className="text-[11px] text-muted-foreground">Volume de páginas lidas por dia</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <span className="inline-block w-2.5 h-2.5 rounded-full bg-marsala" />
+            <span>{readingPace.totalPagesInPeriod} páginas no período</span>
+          </div>
+        </div>
+
+        <ResponsiveContainer width="100%" height={160}>
+          <BarChart data={dailyHistory} barSize={10} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.4)" vertical={false} />
+            <XAxis
+              dataKey="dayLabel"
+              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              stroke="hsl(var(--border))"
+              axisLine={false}
+              tickLine={false}
+              interval={4}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              stroke="hsl(var(--border))"
+              axisLine={false}
+              tickLine={false}
+              width={30}
+            />
+            <Tooltip
+              cursor={{ fill: "hsl(var(--secondary) / 0.4)" }}
+              contentStyle={{
+                backgroundColor: "hsl(var(--card))",
+                borderColor: "hsl(var(--border))",
+                borderRadius: "12px",
+                fontSize: "12px",
+                color: "hsl(var(--foreground))",
+                boxShadow: "var(--shadow-card)",
+              }}
+              labelStyle={{ fontWeight: 600, color: "hsl(var(--foreground))" }}
+              itemStyle={{ color: "hsl(var(--marsala))" }}
+              formatter={(value: number) => [`${value} página(s)`, "Lidas"]}
+              labelFormatter={(_label, payload) => {
+                if (payload && payload.length > 0 && payload[0].payload) {
+                  const pt = payload[0].payload;
+                  return `${pt.dayOfWeek}, ${pt.dayLabel} (${pt.date})`;
+                }
+                return _label;
+              }}
+            />
+            <Bar dataKey="pages" radius={[4, 4, 0, 0]}>
+              {dailyHistory.map((entry, index) => (
+                <Cell
+                  key={index}
+                  fill={entry.pages > 0 ? "hsl(var(--marsala))" : "hsl(var(--secondary) / 0.4)"}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </motion.div>
+
       {/* Grid: Reading Goal + Monthly Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Goal Card */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
+          transition={{ delay: 0.3 }}
           className="bg-card rounded-2xl border border-border p-5 shadow-card flex flex-col justify-between"
         >
           <div>
@@ -191,7 +376,7 @@ const StatsPanel = () => {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.35 }}
           className="lg:col-span-2 bg-card rounded-2xl border border-border p-5 shadow-card"
         >
           <div className="flex items-center justify-between mb-4">

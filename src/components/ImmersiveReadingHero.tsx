@@ -12,7 +12,7 @@ interface ImmersiveReadingHeroProps {
 }
 
 export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: ImmersiveReadingHeroProps) => {
-  const { books, updateProgress, setSelectedBook, startReading, readingQueue } = useBooks();
+  const { books, updateProgress, setSelectedBook, startReading, readingQueue, streak, readingPace } = useBooks();
 
   // Livro ativo em leitura (prioriza o que tem maior progresso ou mais recente)
   const activeBook = useMemo(() => books.find(b => b.status === "lendo") || null, [books]);
@@ -191,10 +191,15 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
           <div className="bg-background/80 backdrop-blur-xs rounded-2xl p-4 border border-border/80 shadow-xs space-y-2.5">
             <div className="flex items-center justify-between text-xs sm:text-sm font-numeric">
               <div className="flex items-center gap-2">
-                <Flame className="w-4 h-4 text-gold" />
+                <Flame className="w-4 h-4 text-gold fill-gold/20" />
                 <span className="font-semibold text-foreground">
                   Página {activeBook.currentPage || 0} de {activeBook.totalPages || "?"}
                 </span>
+                {streak.currentStreak > 0 && (
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gold/15 text-gold border border-gold/30">
+                    🔥 {streak.currentStreak} {streak.currentStreak === 1 ? "dia" : "dias"}
+                  </span>
+                )}
               </div>
               <span className="font-bold text-marsala font-numeric">
                 {activeBook.progress || 0}% concluído
@@ -213,6 +218,9 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
             <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5">
               <span>
                 Faltam {Math.max(0, (activeBook.totalPages || 0) - (activeBook.currentPage || 0))} páginas para a conclusão
+                {readingPace.estimatedDaysToFinish !== null && readingPace.estimatedDaysToFinish > 0
+                  ? ` • ~${readingPace.estimatedDaysToFinish} ${readingPace.estimatedDaysToFinish === 1 ? "dia" : "dias"} no ritmo atual`
+                  : ""}
               </span>
               {isEditingPage ? (
                 <div className="flex items-center gap-1.5 animate-fade-in">

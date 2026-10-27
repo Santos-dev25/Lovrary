@@ -2,6 +2,15 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef, us
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { type Book, type BookNote, mockBooks } from "@/data/mockBooks";
 import { sanitizeCoverUrl } from "@/lib/googleBooks";
+import {
+  type ReadingSession,
+  type StreakResult,
+  type ReadingPaceResult,
+  calculateStreak,
+  calculateReadingPace,
+  getLocalDateString,
+  offsetDateString,
+} from "@/utils/sessions";
 import { toast } from "sonner";
 
 interface BooksContextType {
@@ -22,7 +31,19 @@ interface BooksContextType {
   moveToAcervo: (bookId: string) => void;
   startReading: (bookId: string) => void;
   finishReading: (bookId: string) => void;
-  updateProgress: (bookId: string, currentPage: number) => void;
+  updateProgress: (bookId: string, currentPage: number, durationMinutes?: number) => void;
+  readingSessions: ReadingSession[];
+  recordReadingSession: (session: {
+    bookId: string;
+    pagesRead: number;
+    startPage?: number | null;
+    endPage?: number | null;
+    durationMinutes?: number | null;
+    notes?: string | null;
+    sessionDate?: string;
+  }) => Promise<void>;
+  streak: StreakResult;
+  readingPace: ReadingPaceResult;
   addToQueue: (bookId: string) => void;
   removeFromQueue: (bookId: string) => void;
   reorderQueue: (fromIndex: number, toIndex: number) => void;
@@ -49,6 +70,7 @@ const QUEUE_KEY = "lovrary_queue";
 const GUEST_KEY = "lovrary_guest_session";
 const GUEST_BOOKS_KEY = "lovrary_guest_books";
 const GUEST_GOAL_KEY = "lovrary_guest_goal";
+const GUEST_SESSIONS_KEY = "lovrary_guest_sessions";
 
 // DB row -> Book mapping
 type DbBook = {
@@ -135,6 +157,14 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
       return [];
     } catch { return []; }
   });
+  const [readingSessions, setReadingSessions] = useState<ReadingSession[]>(() => {
+    try {
+      if (localStorage.getItem(GUEST_KEY) === "true") {
+        return JSON.parse(localStorage.getItem(GUEST_SESSIONS_KEY) || "[]");
+      }
+      return [];
+    } catch { return []; }
+  });
   const [readingGoalConfig, setReadingGoalConfig] = useState({ year: new Date().getFullYear(), target: 12 });
 
   // Cálculo reativo e instantâneo dos livros lidos no ano da meta (sem necessidade de F5)
@@ -169,6 +199,22 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     readingQueueRef.current = readingQueue;
   }, [readingQueue]);
 
+  const readingSessionsRef = useRef<ReadingSession[]>(readingSessions);
+  useEffect(() => {
+    readingSessionsRef.current = readingSessions;
+  }, [readingSessions]);
+
+  const activeReadingBook = useMemo(() => books.find(b => b.status === "lendo"), [books]);
+  const activeBookRemainingPages = activeReadingBook && activeReadingBook.totalPages
+    ? Math.max(0, activeReadingBook.totalPages - (activeReadingBook.currentPage || 0))
+    : undefined;
+
+  const streak = useMemo(() => calculateStreak(readingSessions), [readingSessions]);
+  const readingPace = useMemo(
+    () => calculateReadingPace(readingSessions, activeBookRemainingPages),
+    [readingSessions, activeBookRemainingPages]
+  );
+
   const selectedBook = useMemo(() => books.find(b => b.id === selectedBookId) || null, [books, selectedBookId]);
   const setSelectedBook = useCallback((b: Book | null) => {
     setSelectedBookId(b ? b.id : null);
@@ -199,6 +245,25 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
       const storedQueue = localStorage.getItem(QUEUE_KEY);
       const guestQueue = storedQueue ? JSON.parse(storedQueue) : ["6", "7"];
       setReadingQueue(guestQueue);
+
+      const storedSessions = localStorage.getItem(GUEST_SESSIONS_KEY);
+      if (storedSessions) {
+        const parsed = JSON.parse(storedSessions);
+        setReadingSessions(parsed);
+        readingSessionsRef.current = parsed;
+      } else {
+        const todayStr = getLocalDateString();
+        const yesterdayStr = offsetDateString(todayStr, -1);
+        const twoDaysAgoStr = offsetDateString(todayStr, -2);
+        const sampleSessions: ReadingSession[] = [
+          { id: "guest_s1", bookId: "1", pagesRead: 28, durationMinutes: 35, sessionDate: twoDaysAgoStr },
+          { id: "guest_s2", bookId: "1", pagesRead: 34, durationMinutes: 45, sessionDate: yesterdayStr },
+          { id: "guest_s3", bookId: "1", pagesRead: 22, durationMinutes: 25, sessionDate: todayStr },
+        ];
+        setReadingSessions(sampleSessions);
+        readingSessionsRef.current = sampleSessions;
+        localStorage.setItem(GUEST_SESSIONS_KEY, JSON.stringify(sampleSessions));
+      }
     } catch (e) {
       console.error("Erro ao carregar dados de visitante:", e);
       setBooks(mockBooks);
@@ -220,10 +285,13 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem(GUEST_BOOKS_KEY);
     localStorage.removeItem(GUEST_GOAL_KEY);
     localStorage.removeItem(QUEUE_KEY);
+    localStorage.removeItem(GUEST_SESSIONS_KEY);
     setIsGuest(false);
     setUserId(null);
     setBooks([]);
     setReadingQueue([]);
+    setReadingSessions([]);
+    readingSessionsRef.current = [];
     setSelectedBookId(null);
   }, []);
 
@@ -236,20 +304,53 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
         { data: notesData },
         { data: goalData },
         { data: queueData, error: queueErr },
+        { data: sessionsData, error: sessionsErr },
       ] = await Promise.all([
         supabase.from("books").select("*").eq("user_id", _uid).order("created_at", { ascending: false }),
         supabase.from("journal_notes").select("*").eq("user_id", _uid).order("created_at", { ascending: true }),
         supabase.from("reading_goals").select("*").eq("user_id", _uid).eq("year", new Date().getFullYear()).maybeSingle(),
         supabase.from("reading_queue").select("book_id, position").eq("user_id", _uid).order("position", { ascending: true }),
+        supabase.from("reading_sessions").select("*").eq("user_id", _uid).order("session_date", { ascending: false }),
       ]);
 
       if (booksErr) throw booksErr;
       if (queueErr) {
         console.warn("[Lovrary] Aviso ao carregar reading_queue:", queueErr);
       }
+      if (sessionsErr) {
+        console.warn("[Lovrary] Aviso ao carregar reading_sessions:", sessionsErr);
+      }
 
       const allBooks = (booksData || []).map(b => dbToBook(b as unknown as DbBook, (notesData || []) as unknown as DbNote[]));
       setBooks(allBooks);
+
+      const mappedSessions: ReadingSession[] = (sessionsData || []).map((s: {
+        id: string;
+        book_id: string;
+        user_id: string;
+        pages_read: number;
+        start_page: number | null;
+        end_page: number | null;
+        duration_minutes: number | null;
+        session_date: string;
+        notes: string | null;
+        created_at: string;
+        updated_at: string;
+      }) => ({
+        id: s.id,
+        bookId: s.book_id,
+        userId: s.user_id,
+        pagesRead: s.pages_read || 0,
+        startPage: s.start_page,
+        endPage: s.end_page,
+        durationMinutes: s.duration_minutes,
+        sessionDate: s.session_date,
+        notes: s.notes,
+        createdAt: s.created_at,
+        updatedAt: s.updated_at,
+      }));
+      setReadingSessions(mappedSessions);
+      readingSessionsRef.current = mappedSessions;
 
       const year = new Date().getFullYear();
       if (goalData && typeof (goalData as { goal?: number }).goal === "number") {
@@ -329,8 +430,11 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
         setUserId(null);
         setBooks([]);
         setReadingQueue([]);
+        setReadingSessions([]);
+        readingSessionsRef.current = [];
         setSelectedBookId(null);
         localStorage.removeItem(QUEUE_KEY);
+        localStorage.removeItem(GUEST_SESSIONS_KEY);
         setLoading(false);
       }
     });
@@ -440,6 +544,7 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
   const deleteBook = useCallback(async (bookId: string) => {
     const previousBooks = booksRef.current;
     const previousQueue = readingQueue;
+    const previousSessions = readingSessionsRef.current;
 
     // 1. Atualização otimista imediata na UI (0ms de atraso perceptível)
     setBooks(prev => {
@@ -449,6 +554,14 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     });
 
     setReadingQueue(prev => prev.filter(id => id !== bookId));
+    setReadingSessions(prev => {
+      const next = prev.filter(s => s.bookId !== bookId);
+      if (isGuest || userId === "guest") {
+        localStorage.setItem(GUEST_SESSIONS_KEY, JSON.stringify(next));
+      }
+      readingSessionsRef.current = next;
+      return next;
+    });
     setSelectedBookId(prev => (prev === bookId ? null : prev));
     toast.success("Livro removido do acervo!");
 
@@ -457,12 +570,15 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     // 2. Persistência assíncrona com rollback em caso de falha de rede
     try {
       await supabase.from("journal_notes").delete().eq("book_id", bookId).eq("user_id", userId);
+      await supabase.from("reading_sessions").delete().eq("book_id", bookId).eq("user_id", userId);
       const { error } = await supabase.from("books").delete().eq("id", bookId).eq("user_id", userId);
       if (error) throw error;
     } catch (e) {
       console.error("Erro ao excluir livro no Supabase:", e);
       setBooks(previousBooks);
       setReadingQueue(previousQueue);
+      setReadingSessions(previousSessions);
+      readingSessionsRef.current = previousSessions;
       toast.error("Erro ao sincronizar exclusão com o servidor. Ação desfeita.");
     }
   }, [isGuest, userId, readingQueue]);
@@ -648,22 +764,108 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     toast.success("Boa leitura! 📖");
   }, [updateBook, userId, isGuest]);
 
+  const recordReadingSession = useCallback(async (params: {
+    bookId: string;
+    pagesRead: number;
+    startPage?: number | null;
+    endPage?: number | null;
+    durationMinutes?: number | null;
+    notes?: string | null;
+    sessionDate?: string;
+  }) => {
+    if (params.pagesRead <= 0) return;
+    const sessionDate = params.sessionDate || getLocalDateString();
+    const tempId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+    const newSession: ReadingSession = {
+      id: tempId,
+      bookId: params.bookId,
+      userId: userId || undefined,
+      pagesRead: params.pagesRead,
+      startPage: params.startPage ?? null,
+      endPage: params.endPage ?? null,
+      durationMinutes: params.durationMinutes ?? null,
+      sessionDate,
+      notes: params.notes ?? null,
+      createdAt: new Date().toISOString(),
+    };
+
+    const nextSessions = [newSession, ...readingSessionsRef.current];
+    readingSessionsRef.current = nextSessions;
+    setReadingSessions(nextSessions);
+
+    if (isGuest || userId === "guest") {
+      localStorage.setItem(GUEST_SESSIONS_KEY, JSON.stringify(nextSessions));
+      return;
+    }
+
+    if (!userId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("reading_sessions")
+        .insert({
+          user_id: userId,
+          book_id: params.bookId,
+          pages_read: params.pagesRead,
+          start_page: params.startPage ?? null,
+          end_page: params.endPage ?? null,
+          duration_minutes: params.durationMinutes ?? null,
+          session_date: sessionDate,
+          notes: params.notes ?? null,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Erro ao registrar reading_session no Supabase:", error);
+      } else if (data?.id) {
+        setReadingSessions(prev =>
+          prev.map(s => (s.id === tempId ? { ...s, id: data.id } : s))
+        );
+      }
+    } catch (err) {
+      console.error("Erro inesperado ao salvar sessão de leitura:", err);
+    }
+  }, [userId, isGuest]);
+
   const finishReading = useCallback((bookId: string) => {
     const book = booksRef.current.find(b => b.id === bookId);
     const total = book?.totalPages || 0;
-    const today = new Date().toISOString().slice(0, 10);
+    const oldPage = book?.currentPage || 0;
+    const today = getLocalDateString();
     updateBook(bookId, { status: "lido", currentPage: total, dateFinished: book?.dateFinished || today });
     toast.success("Parabéns por finalizar o livro! 🎉");
-  }, [updateBook]);
 
-  const updateProgress = useCallback((bookId: string, currentPage: number) => {
+    if (total > oldPage) {
+      recordReadingSession({
+        bookId,
+        pagesRead: total - oldPage,
+        startPage: oldPage,
+        endPage: total,
+      });
+    }
+  }, [updateBook, recordReadingSession]);
+
+  const updateProgress = useCallback((bookId: string, currentPage: number, durationMinutes?: number) => {
     const book = booksRef.current.find(b => b.id === bookId);
+    const oldPage = book?.currentPage || 0;
     const validPage = Math.max(0, currentPage);
     const total = book?.totalPages || 0;
     updateBook(bookId, { currentPage: validPage });
     const pct = total > 0 ? Math.min(Math.round((validPage / total) * 100), 100) : 0;
     toast.success(`Progresso atualizado para pág. ${validPage} (${pct}%)`);
-  }, [updateBook]);
+
+    if (validPage > oldPage) {
+      recordReadingSession({
+        bookId,
+        pagesRead: validPage - oldPage,
+        startPage: oldPage,
+        endPage: validPage,
+        durationMinutes: durationMinutes ?? null,
+      });
+    }
+  }, [updateBook, recordReadingSession]);
 
   const addToQueue = useCallback((bookId: string) => {
     const currentQueue = readingQueueRef.current;
@@ -822,12 +1024,14 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     books, loading, isGuest, loginAsGuest, logoutGuest, addBook, readingQueue,
     readingGoal, selectedBook, setSelectedBook, updateBook,
     addNote, updateNote, deleteNote, moveToAcervo, startReading, finishReading, updateProgress,
+    readingSessions, recordReadingSession, streak, readingPace,
     addToQueue, removeFromQueue, reorderQueue, setGoalTarget, addReview, addQuote,
     removeQuote, setRating, setSubRating, addVibe, removeVibe, deleteBook,
   }), [
     books, loading, isGuest, loginAsGuest, logoutGuest, addBook, readingQueue,
     readingGoal, selectedBook, setSelectedBook, updateBook,
     addNote, updateNote, deleteNote, moveToAcervo, startReading, finishReading, updateProgress,
+    readingSessions, recordReadingSession, streak, readingPace,
     addToQueue, removeFromQueue, reorderQueue, setGoalTarget, addReview, addQuote,
     removeQuote, setRating, setSubRating, addVibe, removeVibe, deleteBook,
   ]);
