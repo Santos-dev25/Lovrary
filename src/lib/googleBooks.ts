@@ -145,6 +145,34 @@ export const searchGoogleBooks = async (
           body: { query: cleanQuery, maxResults: safeLimit, startIndex, searchType },
         });
 
+        if (fnError) {
+          // Detecta se a Edge Function retornou status HTTP 429 (Rate Limit de Servidor)
+          const status = (fnError as any)?.context?.status;
+          let rateLimitMsg = "";
+
+          if (status === 429) {
+            try {
+              const errBody = await (fnError as any)?.context?.json();
+              rateLimitMsg = errBody?.error || "Muitas buscas em pouco tempo. Aguarde alguns instantes.";
+            } catch {
+              rateLimitMsg = "Muitas buscas em pouco tempo. Aguarde alguns instantes.";
+            }
+          } else if (
+            fnError.message?.includes("429") ||
+            fnError.message?.toLowerCase().includes("muitas buscas") ||
+            (data as any)?.error?.toLowerCase().includes("muitas buscas")
+          ) {
+            rateLimitMsg = (data as any)?.error || "Muitas buscas em pouco tempo. Aguarde alguns instantes.";
+          }
+
+          if (rateLimitMsg) {
+            return {
+              items: [],
+              error: rateLimitMsg,
+            };
+          }
+        }
+
         if (!fnError && data?.items && Array.isArray(data.items) && data.items.length > 0) {
           let items = sanitizeGoogleBooks(data.items);
 
