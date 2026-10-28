@@ -85,4 +85,21 @@ describe("calculateTotalPagesRead", () => {
     // 250 (lido com string '250') + 0 (negativo vira 0) + 0 (invÃ¡lido vira 0) = 250
     expect(calculateTotalPagesRead(books as any)).toBe(250);
   });
+  it("deve somar currentPage para livros com status 'abandonado'", () => {
+    const books: Partial<Book>[] = [
+      { id: "1", status: "abandonado", totalPages: 600, currentPage: 140, ownership: "tenho" },
+      { id: "2", status: "abandonado", totalPages: 450, currentPage: 60, ownership: "tenho" },
+    ];
+    // 140 + 60 = 200
+    expect(calculateTotalPagesRead(books as Book[])).toBe(200);
+  });
+
+  it("deve somar 0 páginas para livros com status 'emprestado'", () => {
+    const books: Partial<Book>[] = [
+      { id: "1", status: "emprestado", totalPages: 400, currentPage: 150, ownership: "tenho", borrowedTo: "Mariana" },
+      { id: "2", status: "emprestado", totalPages: 300, currentPage: 0, ownership: "tenho", borrowedTo: "Carlos" },
+    ];
+    // Livro emprestado não conta páginas lidas
+    expect(calculateTotalPagesRead(books as Book[])).toBe(0);
+  });
 });

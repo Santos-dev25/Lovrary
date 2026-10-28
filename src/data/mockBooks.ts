@@ -6,6 +6,8 @@ export interface BookNote {
   text: string;
 }
 
+export type BookStatus = "lido" | "lendo" | "nao-lido" | "abandonado" | "emprestado";
+
 export interface Book {
   id: string;
   title: string;
@@ -15,7 +17,9 @@ export interface Book {
   category: string;
   vibes: string[];
   ownership: "tenho" | "pretendo";
-  status: "lido" | "lendo" | "nao-lido";
+  status: BookStatus;
+  borrowedTo?: string;
+  borrowedDate?: string;
   progress?: number;
   totalPages?: number;
   currentPage?: number;

@@ -89,6 +89,8 @@ type DbBook = {
   quotes: string[] | null;
   resenha: string | null;
   date_finished?: string | null;
+  borrowed_to?: string | null;
+  borrowed_date?: string | null;
 };
 
 type DbNote = {
@@ -139,6 +141,8 @@ const dbToBook = (row: DbBook, notes: DbNote[]): Book => {
     quotes: row.quotes || [],
     subRatings,
     dateFinished: row.date_finished || undefined,
+    borrowedTo: row.borrowed_to || undefined,
+    borrowedDate: row.borrowed_date || undefined,
   };
 };
 
@@ -524,10 +528,12 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
       category: String(book.category || "Outros").trim().slice(0, 50),
       vibes: Array.isArray(book.vibes) ? book.vibes.slice(0, 10).map(v => String(v).trim().slice(0, 30)) : [],
       ownership: book.ownership === "pretendo" ? "pretendo" : "tenho",
-      status: ["lido", "lendo", "nao-lido"].includes(book.status) ? book.status : "nao-lido",
+      status: ["lido", "lendo", "nao-lido", "abandonado", "emprestado"].includes(book.status) ? book.status : "nao-lido",
       total_pages: Math.max(0, Math.min(Number(book.totalPages) || 0, 100000)),
       current_page: Math.max(0, Math.min(Number(book.currentPage) || 0, 100000)),
       rating: Math.max(0, Math.min(5, Number(book.rating) || 0)),
+      borrowed_to: book.borrowedTo ? String(book.borrowedTo).trim().slice(0, 150) : null,
+      borrowed_date: book.borrowedDate || null,
     };
 
     const { data, error } = await supabase.from("books").insert(insertData).select().single();
@@ -617,6 +623,8 @@ export const BooksProvider = ({ children }: { children: ReactNode }) => {
     if (updates.quotes !== undefined) dbUpdates.quotes = Array.isArray(updates.quotes) ? updates.quotes.slice(0, 50).map(q => String(q).slice(0, 500)) : [];
     if (updates.subRatings !== undefined) dbUpdates.sub_ratings = subRatingsToDb(updates.subRatings);
     if (updates.dateFinished !== undefined) dbUpdates.date_finished = updates.dateFinished || null;
+    if (updates.borrowedTo !== undefined) dbUpdates.borrowed_to = updates.borrowedTo ? String(updates.borrowedTo).trim().slice(0, 150) : null;
+    if (updates.borrowedDate !== undefined) dbUpdates.borrowed_date = updates.borrowedDate || null;
 
     if (Object.keys(dbUpdates).length > 0) persistBook(id, dbUpdates);
   }, [isGuest, userId]);

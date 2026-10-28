@@ -29,6 +29,7 @@ const Index = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [groupByAuthor, setGroupByAuthor] = useState(false);
   const [sortBy, setSortBy] = useState<"recent" | "rating-desc" | "date-finished" | "pages-desc" | "pages-asc" | "title-asc" | "author-asc">("recent");
+  const [statusFilter, setStatusFilter] = useState<"todos" | "nao-lido" | "lendo" | "lido" | "emprestado" | "abandonado">("todos");
 
   const { books, setSelectedBook, selectedBook } = useBooks();
 
@@ -52,6 +53,9 @@ const Index = () => {
       if (activeTab === "wishlist") return b.ownership === "pretendo";
       if (activeTab === "lendo") return b.status === "lendo";
       if (b.ownership !== "tenho") return false;
+      if (activeTab === "acervo" && statusFilter !== "todos") {
+        if (b.status !== statusFilter) return false;
+      }
       if (category !== "Todos") {
         const target = category.trim().toLowerCase();
         const catMatch = b.category && b.category.trim().toLowerCase() === target;
@@ -91,7 +95,7 @@ const Index = () => {
       }
       return 0; // "recent" preserves original catalog insertion order
     });
-  }, [books, activeTab, category, search, sortBy]);
+  }, [books, activeTab, category, search, sortBy, statusFilter]);
 
   const renderContent = () => {
     if (activeTab === "dashboard") {
@@ -113,7 +117,7 @@ const Index = () => {
           <div>
             <h3 className="font-display font-semibold text-lg text-foreground mb-4">Últimas Adições</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-              {books.filter(b => b.ownership === "tenho").slice(0, 5).map((book) => (
+              {books.filter(b => b.ownership === "tenho" && b.status !== "emprestado").slice(0, 5).map((book) => (
                 <BookCard key={book.id} book={book} onClick={() => setSelectedBook(book)} />
               ))}
             </div>
@@ -178,6 +182,30 @@ const Index = () => {
               )}
             </div>
 
+                        {/* Status Filter Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              {[
+                { id: "todos", label: "Todos", count: books.filter(b => b.ownership === "tenho").length },
+                { id: "nao-lido", label: "Na Estante", count: books.filter(b => b.ownership === "tenho" && b.status === "nao-lido").length },
+                { id: "lendo", label: "Lendo", count: books.filter(b => b.ownership === "tenho" && b.status === "lendo").length },
+                { id: "lido", label: "Lidos", count: books.filter(b => b.ownership === "tenho" && b.status === "lido").length },
+                { id: "emprestado", label: "Emprestados", count: books.filter(b => b.status === "emprestado").length },
+                { id: "abandonado", label: "Abandonados", count: books.filter(b => b.status === "abandonado").length },
+              ].map((pill) => (
+                <button
+                  key={pill.id}
+                  onClick={() => setStatusFilter(pill.id as any)}
+                  className={`text-xs px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-all border ${
+                    statusFilter === pill.id
+                      ? "gradient-marsala text-primary-foreground border-transparent shadow-xs font-semibold"
+                      : "bg-card text-muted-foreground border-border hover:text-foreground hover:bg-secondary"
+                  }`}
+                >
+                  {pill.label} <span className="opacity-75 font-numeric text-[11px]">({pill.count})</span>
+                </button>
+              ))}
+            </div>
+
             {/* Category Filter Pills */}
             <CategoryFilter active={category} onChange={setCategory} items={availableCategories} />
 
@@ -226,7 +254,7 @@ const Index = () => {
                   </select>
                 </div>
 
-                {(category !== "Todos" || search || sortBy !== "recent") && (
+                {(category !== "Todos" || search || sortBy !== "recent" || statusFilter !== "todos") && (
                   <button
                     onClick={() => {
                       setCategory("Todos");

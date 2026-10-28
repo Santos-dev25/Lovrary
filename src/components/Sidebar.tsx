@@ -43,7 +43,7 @@ const Sidebar = ({
 
   // Contagem exata em tempo real por abas ('tenho', 'pretendo', 'lendo', 'lido')
   const tabCounts = useMemo(() => ({
-    acervo: books.filter(b => b.ownership === "tenho").length,
+    acervo: books.filter(b => b.ownership === "tenho" && b.status !== "emprestado").length,
     wishlist: books.filter(b => b.ownership === "pretendo").length,
     lendo: books.filter(b => b.status === "lendo").length,
     stats: books.filter(b => b.status === "lido").length,

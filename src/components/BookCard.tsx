@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Star, Bookmark } from "lucide-react";
-import type { Book } from "@/data/mockBooks";
+import type { Book, BookStatus } from "@/data/mockBooks";
 import { motion } from "framer-motion";
 import RatingStars from "@/components/RatingStars";
 

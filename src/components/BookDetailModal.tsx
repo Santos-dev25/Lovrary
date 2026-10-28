@@ -38,6 +38,11 @@ export const BookDetailModal = () => {
   const [customGenreInput, setCustomGenreInput] = useState("");
   const [confirmDeleteBook, setConfirmDeleteBook] = useState(false);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
+  const [borrowModalOpen, setBorrowModalOpen] = useState(false);
+  const [borrowPerson, setBorrowPerson] = useState("");
+  const [borrowDate, setBorrowDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [abandonModalOpen, setAbandonModalOpen] = useState(false);
+  const [abandonPage, setAbandonPage] = useState("");
 
   const [recs, setRecs] = useState<{ id: string; title: string; author: string; cover: string }[]>([]);
   const [recsLoading, setRecsLoading] = useState(false);
