@@ -124,7 +124,7 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
       category,
       vibes: [],
       ownership,
-      status: "nao-lido",
+      status: initialStatus,
       totalPages: Math.max(0, Math.min(Number(v.pageCount) || 0, 100000)),
       currentPage: 0,
     };
@@ -135,7 +135,7 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
     }
   };
 
-  const handleManualAdd = async (ownership: "tenho" | "pretendo") => {
+  const handleManualAdd = async (ownership: "tenho" | "pretendo", initialStatus: Book["status"] = "nao-lido") => {
     if (!manualTitle.trim() || isManualAdding) return;
     setIsManualAdding(true);
     const safeTitle = manualTitle.trim().slice(0, 250);
@@ -475,22 +475,30 @@ const AddBookModal = ({ open, onClose }: AddBookModalProps) => {
                 </div>
               )}
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-col sm:flex-row gap-2 pt-2">
                 <button
-                  onClick={() => handleManualAdd("tenho")}
+                  onClick={() => handleManualAdd("tenho", "nao-lido")}
                   disabled={!manualTitle.trim() || isManualAdding}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium gradient-marsala text-primary-foreground rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
                   {isManualAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                  <span>{isManualAdding ? "Adicionando..." : "Tenho"}</span>
+                  <span>{isManualAdding ? "Adicionando..." : "Tenho (Acervo)"}</span>
                 </button>
                 <button
-                  onClick={() => handleManualAdd("pretendo")}
+                  onClick={() => handleManualAdd("pretendo", "nao-lido")}
                   disabled={!manualTitle.trim() || isManualAdding}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium border border-marsala text-marsala rounded-xl hover:bg-marsala/10 transition-colors disabled:opacity-50"
                 >
                   {isManualAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
                   <span>{isManualAdding ? "Adicionando..." : "Quero ter"}</span>
+                </button>
+                <button
+                  onClick={() => handleManualAdd("tenho", "emprestado")}
+                  disabled={!manualTitle.trim() || isManualAdding}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium border border-indigo-500/40 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 rounded-xl hover:bg-indigo-500/20 transition-colors disabled:opacity-50"
+                >
+                  {isManualAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUpRight className="w-4 h-4" />}
+                  <span>{isManualAdding ? "Adicionando..." : "Peguei Emprestado"}</span>
                 </button>
               </div>
             </div>

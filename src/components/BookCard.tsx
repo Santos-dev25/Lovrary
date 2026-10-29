@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { Star, Bookmark } from "lucide-react";
 import type { Book, BookStatus } from "@/data/mockBooks";
+import { getReturnDeadline } from "@/utils/stats";
 import { motion } from "framer-motion";
 import RatingStars from "@/components/RatingStars";
 
@@ -27,6 +28,7 @@ const statusConfig = {
 const BookCard = memo(({ book, onClick }: BookCardProps) => {
   const status = statusConfig[book.status] || statusConfig["nao-lido"];
   const hasNotes = book.notes && book.notes.length > 0;
+  const deadline = book.status === "emprestado" ? getReturnDeadline(book.returnDate) : null;
 
   return (
     <motion.div

@@ -18,8 +18,10 @@ export interface Book {
   vibes: string[];
   ownership: "tenho" | "pretendo";
   status: BookStatus;
+  borrowedFrom?: string;
   borrowedTo?: string;
   borrowedDate?: string;
+  returnDate?: string;
   progress?: number;
   totalPages?: number;
   currentPage?: number;

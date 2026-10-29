@@ -80,10 +80,12 @@ const StatsPanel = () => {
     ];
 
     const tabs = {
-      tenho: books.filter((b) => b.ownership === "tenho").length,
+      tenho: books.filter((b) => b.ownership === "tenho" && b.status !== "emprestado").length,
       pretendo: books.filter((b) => b.ownership === "pretendo").length,
       lendo: books.filter((b) => b.status === "lendo").length,
       lido: totalRead,
+      emprestado: books.filter((b) => b.status === "emprestado").length,
+      abandonado: books.filter((b) => b.status === "abandonado").length,
     };
 
     return {
@@ -101,10 +103,10 @@ const StatsPanel = () => {
 
   return (
     <div className="space-y-6">
-      {/* Contagem exata por abas ('tenho', 'pretendo', 'lendo', 'lido') */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-2xl bg-secondary/30 border border-border">
+      {/* Contagem exata por abas ('tenho', 'pretendo', 'lendo', 'lido', 'emprestado') */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 p-3 rounded-2xl bg-secondary/30 border border-border">
         <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-card border border-border/60 shadow-2xs">
-          <span className="text-xs text-muted-foreground font-medium">Tenho</span>
+          <span className="text-xs text-muted-foreground font-medium">Acervo</span>
           <span className="font-numeric text-xs font-bold text-foreground">{tabCounts.tenho}</span>
         </div>
         <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-card border border-border/60 shadow-2xs">
@@ -118,6 +120,10 @@ const StatsPanel = () => {
         <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-card border border-border/60 shadow-2xs">
           <span className="text-xs text-muted-foreground font-medium">Lidos</span>
           <span className="font-numeric text-xs font-bold text-foreground">{tabCounts.lido}</span>
+        </div>
+        <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-card border border-border/60 shadow-2xs col-span-2 sm:col-span-1">
+          <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Com Você</span>
+          <span className="font-numeric text-xs font-bold text-indigo-600 dark:text-indigo-400">{tabCounts.emprestado}</span>
         </div>
       </div>
 

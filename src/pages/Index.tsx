@@ -189,7 +189,7 @@ const Index = () => {
                 { id: "nao-lido", label: "Na Estante", count: books.filter(b => b.ownership === "tenho" && b.status === "nao-lido").length },
                 { id: "lendo", label: "Lendo", count: books.filter(b => b.ownership === "tenho" && b.status === "lendo").length },
                 { id: "lido", label: "Lidos", count: books.filter(b => b.ownership === "tenho" && b.status === "lido").length },
-                { id: "emprestado", label: "Emprestados", count: books.filter(b => b.status === "emprestado").length },
+                { id: "emprestado", label: "Emprestados com Você", count: books.filter(b => b.status === "emprestado").length },
                 { id: "abandonado", label: "Abandonados", count: books.filter(b => b.status === "abandonado").length },
               ].map((pill) => (
                 <button

@@ -18,7 +18,9 @@ export type Database = {
         Row: {
           author: string | null
           borrowed_date: string | null
+          borrowed_from: string | null
           borrowed_to: string | null
+          return_date: string | null
           category: string | null
           cover: string | null
           created_at: string
@@ -40,7 +42,10 @@ export type Database = {
         Insert: {
           author?: string | null
           borrowed_date?: string | null
+          borrowed_date?: string | null
+          borrowed_from?: string | null
           borrowed_to?: string | null
+          return_date?: string | null
           category?: string | null
           cover?: string | null
           created_at?: string
@@ -62,7 +67,10 @@ export type Database = {
         Update: {
           author?: string | null
           borrowed_date?: string | null
+          borrowed_date?: string | null
+          borrowed_from?: string | null
           borrowed_to?: string | null
+          return_date?: string | null
           category?: string | null
           cover?: string | null
           created_at?: string

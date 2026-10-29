@@ -3,6 +3,7 @@ import { useBooks } from "@/context/BooksContext";
 import { vibeOptions, categoryOptions, mockBooks } from "@/data/mockBooks";
 import { searchGoogleBooks } from "@/lib/googleBooks";
 import RatingStars from "@/components/RatingStars";
+import { getReturnDeadline } from "@/utils/stats";
 import {
   X, Star, Bookmark, Quote, Plus, Trash2, CheckCircle, Play, Tag,
   Calendar, Sparkles, PlusCircle, Feather, BookOpen, MoreHorizontal,
@@ -468,10 +469,10 @@ export const BookDetailModal = () => {
                         setBorrowModalOpen(true);
                       }}
                       className="flex-1 py-2 px-3 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-700 dark:text-sky-300 hover:bg-sky-500/20 text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
-                      title="Registrar que este livro foi emprestado"
+                      title="Registrar que peguei este livro emprestado"
                     >
                       <ArrowUpRight className="w-3.5 h-3.5 text-sky-600" />
-                      <span>Emprestar</span>
+                      <span>Peguei Emprestado</span>
                     </button>
                   )}
 
@@ -654,7 +655,7 @@ export const BookDetailModal = () => {
                           className="w-full text-left text-xs px-2.5 py-1.5 rounded-xl hover:bg-secondary flex items-center gap-2 text-sky-700 dark:text-sky-300 font-medium"
                         >
                           <ArrowUpRight className="w-3.5 h-3.5 text-sky-600" />
-                          <span>Marcar como Emprestado...</span>
+                          <span>Peguei Emprestado...</span>
                         </button>
 
                         <button
@@ -882,42 +883,53 @@ export const BookDetailModal = () => {
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
-                                  {/* Modal Emprestar Livro */}
+                                  {/* Modal Peguei Emprestado */}
       {borrowModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
           <div className="bg-card border border-border rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="font-display font-bold text-sm text-foreground flex items-center gap-2">
-                <ArrowUpRight className="w-4 h-4 text-sky-600" />
-                Emprestar Livro
+                <ArrowUpRight className="w-4 h-4 text-indigo-600" />
+                Peguei Emprestado
               </h4>
               <button onClick={() => setBorrowModalOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Informe para quem você está emprestando &quot;{book.title}&quot;. O livro sairá temporariamente do número do seu acervo ativo.
+              Registre a procedência de &quot;{book.title}&quot;. Ele não contará no seu acervo físico permanente, mas suas páginas lidas serão contabilizadas normalmente.
             </p>
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-semibold text-foreground block mb-1">Para quem você emprestou?</label>
+                <label className="text-xs font-semibold text-foreground block mb-1">De quem você pegou emprestado?</label>
                 <input
                   type="text"
-                  placeholder="Ex: Mariana, Carlos (trabalho)..."
-                  value={borrowPerson}
-                  onChange={(e) => setBorrowPerson(e.target.value)}
-                  className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-sky-500/40"
+                  placeholder="Ex: Biblioteca Municipal, Mariana, Clube..."
+                  value={borrowFrom}
+                  onChange={(e) => setBorrowFrom(e.target.value)}
+                  className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
                   autoFocus
                 />
               </div>
-              <div>
-                <label className="text-xs font-semibold text-foreground block mb-1">Data do empréstimo</label>
-                <input
-                  type="date"
-                  value={borrowDate}
-                  onChange={(e) => setBorrowDate(e.target.value)}
-                  className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-sky-500/40"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-foreground block mb-1">Quando pegou?</label>
+                  <input
+                    type="date"
+                    value={borrowDate}
+                    onChange={(e) => setBorrowDate(e.target.value)}
+                    className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-2.5 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-foreground block mb-1">Prazo de entrega</label>
+                  <input
+                    type="date"
+                    value={returnDateInput}
+                    onChange={(e) => setReturnDateInput(e.target.value)}
+                    className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-2.5 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                  />
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2 pt-2">
@@ -931,13 +943,14 @@ export const BookDetailModal = () => {
                 onClick={() => {
                   updateBook(book.id, {
                     status: "emprestado",
-                    borrowedTo: borrowPerson.trim() || "Pessoa não informada",
+                    borrowedFrom: borrowFrom.trim() || "Não informado",
                     borrowedDate: borrowDate || new Date().toISOString().slice(0, 10),
+                    returnDate: returnDateInput || undefined,
                   });
                   setBorrowModalOpen(false);
-                  toast.success(`Livro registrado como emprestado para ${borrowPerson || "amigo(a)"}! 🤝`);
+                  toast.success(`Livro registrado como pego emprestado de ${borrowFrom || "alguém"}! 📥`);
                 }}
-                className="flex-1 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-xs transition-colors"
+                className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-colors"
               >
                 Confirmar
               </button>
@@ -1262,42 +1275,53 @@ export const BookDetailModal = () => {
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
-                                  {/* Modal Emprestar Livro */}
+                                  {/* Modal Peguei Emprestado */}
       {borrowModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
           <div className="bg-card border border-border rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="font-display font-bold text-sm text-foreground flex items-center gap-2">
-                <ArrowUpRight className="w-4 h-4 text-sky-600" />
-                Emprestar Livro
+                <ArrowUpRight className="w-4 h-4 text-indigo-600" />
+                Peguei Emprestado
               </h4>
               <button onClick={() => setBorrowModalOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Informe para quem você está emprestando &quot;{book.title}&quot;. O livro sairá temporariamente do número do seu acervo ativo.
+              Registre a procedência de &quot;{book.title}&quot;. Ele não contará no seu acervo físico permanente, mas suas páginas lidas serão contabilizadas normalmente.
             </p>
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-semibold text-foreground block mb-1">Para quem você emprestou?</label>
+                <label className="text-xs font-semibold text-foreground block mb-1">De quem você pegou emprestado?</label>
                 <input
                   type="text"
-                  placeholder="Ex: Mariana, Carlos (trabalho)..."
-                  value={borrowPerson}
-                  onChange={(e) => setBorrowPerson(e.target.value)}
-                  className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-sky-500/40"
+                  placeholder="Ex: Biblioteca Municipal, Mariana, Clube..."
+                  value={borrowFrom}
+                  onChange={(e) => setBorrowFrom(e.target.value)}
+                  className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
                   autoFocus
                 />
               </div>
-              <div>
-                <label className="text-xs font-semibold text-foreground block mb-1">Data do empréstimo</label>
-                <input
-                  type="date"
-                  value={borrowDate}
-                  onChange={(e) => setBorrowDate(e.target.value)}
-                  className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-sky-500/40"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-foreground block mb-1">Quando pegou?</label>
+                  <input
+                    type="date"
+                    value={borrowDate}
+                    onChange={(e) => setBorrowDate(e.target.value)}
+                    className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-2.5 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-foreground block mb-1">Prazo de entrega</label>
+                  <input
+                    type="date"
+                    value={returnDateInput}
+                    onChange={(e) => setReturnDateInput(e.target.value)}
+                    className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-2.5 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                  />
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2 pt-2">
@@ -1311,13 +1335,14 @@ export const BookDetailModal = () => {
                 onClick={() => {
                   updateBook(book.id, {
                     status: "emprestado",
-                    borrowedTo: borrowPerson.trim() || "Pessoa não informada",
+                    borrowedFrom: borrowFrom.trim() || "Não informado",
                     borrowedDate: borrowDate || new Date().toISOString().slice(0, 10),
+                    returnDate: returnDateInput || undefined,
                   });
                   setBorrowModalOpen(false);
-                  toast.success(`Livro registrado como emprestado para ${borrowPerson || "amigo(a)"}! 🤝`);
+                  toast.success(`Livro registrado como pego emprestado de ${borrowFrom || "alguém"}! 📥`);
                 }}
-                className="flex-1 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-xs transition-colors"
+                className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-colors"
               >
                 Confirmar
               </button>
@@ -1589,42 +1614,53 @@ export const BookDetailModal = () => {
             </div>
 
           </div>
-              {/* Modal Emprestar Livro */}
+              {/* Modal Peguei Emprestado */}
       {borrowModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
           <div className="bg-card border border-border rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="font-display font-bold text-sm text-foreground flex items-center gap-2">
-                <ArrowUpRight className="w-4 h-4 text-sky-600" />
-                Emprestar Livro
+                <ArrowUpRight className="w-4 h-4 text-indigo-600" />
+                Peguei Emprestado
               </h4>
               <button onClick={() => setBorrowModalOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Informe para quem você está emprestando &quot;{book.title}&quot;. O livro sairá temporariamente do número do seu acervo ativo.
+              Registre a procedência de &quot;{book.title}&quot;. Ele não contará no seu acervo físico permanente, mas suas páginas lidas serão contabilizadas normalmente.
             </p>
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-semibold text-foreground block mb-1">Para quem você emprestou?</label>
+                <label className="text-xs font-semibold text-foreground block mb-1">De quem você pegou emprestado?</label>
                 <input
                   type="text"
-                  placeholder="Ex: Mariana, Carlos (trabalho)..."
-                  value={borrowPerson}
-                  onChange={(e) => setBorrowPerson(e.target.value)}
-                  className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-sky-500/40"
+                  placeholder="Ex: Biblioteca Municipal, Mariana, Clube..."
+                  value={borrowFrom}
+                  onChange={(e) => setBorrowFrom(e.target.value)}
+                  className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
                   autoFocus
                 />
               </div>
-              <div>
-                <label className="text-xs font-semibold text-foreground block mb-1">Data do empréstimo</label>
-                <input
-                  type="date"
-                  value={borrowDate}
-                  onChange={(e) => setBorrowDate(e.target.value)}
-                  className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-sky-500/40"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-foreground block mb-1">Quando pegou?</label>
+                  <input
+                    type="date"
+                    value={borrowDate}
+                    onChange={(e) => setBorrowDate(e.target.value)}
+                    className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-2.5 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-foreground block mb-1">Prazo de entrega</label>
+                  <input
+                    type="date"
+                    value={returnDateInput}
+                    onChange={(e) => setReturnDateInput(e.target.value)}
+                    className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-2.5 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                  />
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2 pt-2">
@@ -1638,13 +1674,14 @@ export const BookDetailModal = () => {
                 onClick={() => {
                   updateBook(book.id, {
                     status: "emprestado",
-                    borrowedTo: borrowPerson.trim() || "Pessoa não informada",
+                    borrowedFrom: borrowFrom.trim() || "Não informado",
                     borrowedDate: borrowDate || new Date().toISOString().slice(0, 10),
+                    returnDate: returnDateInput || undefined,
                   });
                   setBorrowModalOpen(false);
-                  toast.success(`Livro registrado como emprestado para ${borrowPerson || "amigo(a)"}! 🤝`);
+                  toast.success(`Livro registrado como pego emprestado de ${borrowFrom || "alguém"}! 📥`);
                 }}
-                className="flex-1 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-xs transition-colors"
+                className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-colors"
               >
                 Confirmar
               </button>
