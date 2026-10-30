@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,113 +7,116 @@
 @layer base {
   :root {
     color-scheme: light;
-    /* Warm literary paper & marsala palette (Light Mode) */
-    --background: 30 25% 96%;
-    --foreground: 350 30% 15%;
+    /* Lovrary Editorial Contemporary Palette (Light Mode - Paper & Ink) */
+    --background: 37.5 44.4% 96.5%;            /* #FAF7F2 - Fundo Papel */
+    --foreground: 348.0 20.0% 9.8%;            /* #1E1416 - Tinta Principal */
 
-    --card: 30 22% 99%;
-    --card-foreground: 350 30% 15%;
+    --card: 0.0 0.0% 100.0%;                   /* #FFFFFF - Branco Puro */
+    --card-foreground: 348.0 20.0% 9.8%;       /* #1E1416 */
 
-    --popover: 30 22% 99%;
-    --popover-foreground: 350 30% 15%;
+    --popover: 0.0 0.0% 100.0%;                /* #FFFFFF */
+    --popover-foreground: 348.0 20.0% 9.8%;    /* #1E1416 */
 
-    --primary: 348 52% 30%;
-    --primary-foreground: 30 25% 96%;
+    --primary: 351.7 50.7% 27.8%;              /* #6B232D - Marsala Nobre */
+    --primary-foreground: 37.5 44.4% 96.5%;    /* #FAF7F2 - Papel */
 
-    --secondary: 30 18% 91%;
-    --secondary-foreground: 350 30% 15%;
+    --secondary: 36.0 38.5% 92.4%;             /* #F3EDE4 - Pergaminho Sutil */
+    --secondary-foreground: 349.4 10.2% 32.7%; /* #5C4B4E - Tinta Secundária */
 
-    --muted: 30 14% 92%;
-    --muted-foreground: 350 12% 38%;
+    --muted: 34.7 37.3% 90.0%;                 /* #EFE7DC - Container Suave */
+    --muted-foreground: 349.4 10.2% 32.7%;     /* #5C4B4E - Tinta Secundária */
 
-    --accent: 348 40% 40%;
-    --accent-foreground: 30 25% 96%;
+    --accent: 36.0 38.5% 92.4%;                /* #F3EDE4 - Destaque Pergaminho */
+    --accent-foreground: 351.7 50.7% 27.8%;    /* #6B232D - Marsala */
 
-    --destructive: 0 76% 45%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0.0 65.3% 42.9%;            /* #B52626 - Vermelho Editorial */
+    --destructive-foreground: 0.0 0.0% 100.0%; /* #FFFFFF */
 
-    --border: 30 16% 86%;
-    --input: 30 16% 86%;
-    --ring: 348 52% 30%;
+    --border: 31.4 29.6% 86.1%;                /* #E6DCD1 - Divisórias Estruturais */
+    --input: 28.0 12.5% 52.9%;                 /* #968678 - Borda de Controle WCAG 1.4.11 (3.29:1 vs bg, 3.51:1 vs card) */
+    --ring: 351.7 50.7% 27.8%;                 /* #6B232D - Marsala Ring */
 
-    --radius: 0.85rem;
+    --radius: 0.75rem;                         /* 12px base */
 
-    --sidebar-background: 30 24% 98%;
-    --sidebar-foreground: 350 30% 15%;
-    --sidebar-primary: 348 52% 30%;
-    --sidebar-primary-foreground: 30 25% 96%;
-    --sidebar-accent: 30 16% 92%;
-    --sidebar-accent-foreground: 350 30% 15%;
-    --sidebar-border: 30 16% 88%;
-    --sidebar-ring: 348 52% 30%;
+    --sidebar-background: 36.0 50.0% 96.1%;    /* #FAF6F0 - Sidebar Light */
+    --sidebar-foreground: 348.0 20.0% 9.8%;    /* #1E1416 */
+    --sidebar-primary: 351.7 50.7% 27.8%;      /* #6B232D */
+    --sidebar-primary-foreground: 37.5 44.4% 96.5%; /* #FAF7F2 */
+    --sidebar-accent: 36.0 38.5% 92.4%;        /* #F3EDE4 */
+    --sidebar-accent-foreground: 351.7 50.7% 27.8%; /* #6B232D */
+    --sidebar-border: 31.4 29.6% 86.1%;        /* #E6DCD1 */
+    --sidebar-ring: 351.7 50.7% 27.8%;         /* #6B232D */
 
-    /* Brand tokens - Calibrated for WCAG AA/AAA */
-    --marsala: 348 52% 30%;
-    --marsala-light: 348 42% 46%;
-    --marsala-dark: 348 56% 22%;
-    --cream: 30 25% 96%;
-    --cream-dark: 30 16% 90%;
-    --warm-gray: 30 8% 58%;
-    --gold: 35 86% 33%;
-    --gold-light: 38 60% 75%;
+    --marsala: 351.7 50.7% 27.8%;              /* #6B232D */
+    --marsala-light: 350.8 44.5% 37.5%;        /* #8A3542 */
+    --marsala-dark: 351.4 57.1% 19.2%;         /* #4D151D */
+    --cream: 37.5 44.4% 96.5%;                 /* #FAF7F2 */
+    --cream-dark: 36.0 38.5% 92.4%;            /* #F3EDE4 */
+    --warm-gray: 349.4 10.2% 32.7%;            /* #5C4B4E */
+    --gold: 39.8 73.9% 30.0%;                  /* #855F14 - Ouro Velho */
+    --gold-light: 41.1 54.3% 93.1%;            /* #F7F1E4 - Fundo Ouro Sutil */
+    --success: 142.9 43.4% 28.4%;              /* #296841 - Verde Sálvia */
 
-    --gradient-marsala: linear-gradient(135deg, hsl(348 52% 30%), hsl(348 42% 44%));
-    --shadow-card: 0 2px 14px -3px hsl(348 52% 20% / 0.07), 0 1px 3px 0 hsl(348 52% 20% / 0.04);
-    --shadow-card-hover: 0 12px 28px -6px hsl(348 52% 20% / 0.14), 0 4px 10px -2px hsl(348 52% 20% / 0.06);
+    --gradient-marsala: linear-gradient(135deg, hsl(351.7 50.7% 27.8%), hsl(350.8 44.5% 37.5%));
+    --shadow-card: 0 2px 8px -1px rgba(30, 20, 22, 0.05), 0 1px 3px 0 rgba(30, 20, 22, 0.03);
+    --shadow-card-hover: 0 10px 24px -4px rgba(30, 20, 22, 0.08), 0 4px 8px -2px rgba(30, 20, 22, 0.04);
   }
 
   .dark {
     color-scheme: dark;
-    /* Warm Mahogany / Library Study palette (Dark Mode) */
-    --background: 350 16% 7%;
-    --foreground: 30 25% 93%;
+    /* Lovrary Editorial Contemporary Palette (Dark Mode - Dark Parchment & Noir) */
+    --background: 340.0 17.6% 6.7%;            /* #140E10 - Noir Profundo */
+    --foreground: 24.0 33.3% 94.1%;            /* #F5EFEB - Pergaminho Escuro */
 
-    --card: 350 14% 11%;
-    --card-foreground: 30 25% 93%;
+    --card: 345.0 15.4% 10.2%;                 /* #1E1618 - Card Escuro */
+    --card-foreground: 24.0 33.3% 94.1%;       /* #F5EFEB */
 
-    --popover: 350 14% 11%;
-    --popover-foreground: 30 25% 93%;
+    --popover: 345.0 15.4% 10.2%;              /* #1E1618 */
+    --popover-foreground: 24.0 33.3% 94.1%;    /* #F5EFEB */
 
-    --primary: 348 60% 62%;
-    --primary-foreground: 350 20% 8%;
+    --primary: 352.1 55.2% 62.4%;              /* #D46A78 - Marsala Rose */
+    --primary-foreground: 340.0 17.6% 6.7%;    /* #140E10 */
 
-    --secondary: 350 12% 16%;
-    --secondary-foreground: 30 20% 90%;
+    --secondary: 340.0 12.3% 14.3%;            /* #292023 - Painel Escuro */
+    --secondary-foreground: 348.8 9.8% 67.8%;  /* #B5A5A8 - Subtítulo Escuro */
 
-    --muted: 350 10% 17%;
-    --muted-foreground: 30 16% 70%;
+    --muted: 342.0 13.2% 14.9%;                /* #2B2124 - Container Escuro */
+    --muted-foreground: 348.8 7.6% 58.8%;      /* #9E8E91 - Calibrado WCAG AA (6.12:1) */
 
-    --accent: 348 48% 55%;
-    --accent-foreground: 30 25% 95%;
+    --accent: 338.2 13.3% 16.3%;               /* #2F2428 - Destaque Escuro */
+    --accent-foreground: 352.1 55.2% 62.4%;    /* #D46A78 - Marsala Rose */
 
-    --destructive: 0 72% 55%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0.0 67.9% 62.2%;            /* #E05D5D - Alerta Escuro */
+    --destructive-foreground: 340.0 17.6% 6.7%;/* #140E10 */
 
-    --border: 350 12% 19%;
-    --input: 350 12% 19%;
-    --ring: 348 60% 62%;
+    --border: 342.0 9.8% 20.0%;                /* #382E31 - Divisórias Estruturais */
+    --input: 335.3 8.0% 41.8%;                 /* #736269 - Borda de Controle WCAG 1.4.11 (3.35:1 vs bg, 3.11:1 vs card) */
+    --ring: 352.1 55.2% 62.4%;                 /* #D46A78 - Marsala Rose Ring */
 
-    --sidebar-background: 350 18% 9%;
-    --sidebar-foreground: 30 25% 93%;
-    --sidebar-primary: 348 60% 62%;
-    --sidebar-primary-foreground: 350 20% 8%;
-    --sidebar-accent: 350 14% 15%;
-    --sidebar-accent-foreground: 30 25% 95%;
-    --sidebar-border: 350 12% 17%;
-    --sidebar-ring: 348 60% 62%;
+    --radius: 0.75rem;
 
-    --marsala: 348 60% 62%;
-    --marsala-light: 348 55% 70%;
-    --marsala-dark: 348 55% 42%;
-    --cream: 30 15% 85%;
-    --cream-dark: 350 12% 15%;
-    --warm-gray: 30 8% 60%;
-    --gold: 38 90% 67%;
-    --gold-light: 38 60% 50%;
+    --sidebar-background: 342.9 16.3% 8.4%;    /* #191214 - Sidebar Escura */
+    --sidebar-foreground: 24.0 33.3% 94.1%;    /* #F5EFEB */
+    --sidebar-primary: 352.1 55.2% 62.4%;      /* #D46A78 */
+    --sidebar-primary-foreground: 340.0 17.6% 6.7%; /* #140E10 */
+    --sidebar-accent: 340.0 12.3% 14.3%;       /* #292023 */
+    --sidebar-accent-foreground: 352.1 55.2% 62.4%; /* #D46A78 */
+    --sidebar-border: 342.0 9.8% 20.0%;        /* #382E31 */
+    --sidebar-ring: 352.1 55.2% 62.4%;         /* #D46A78 */
 
-    --gradient-marsala: linear-gradient(135deg, hsl(348 58% 42%), hsl(348 50% 54%));
-    --shadow-card: 0 4px 20px -4px hsl(0 0% 0% / 0.5);
-    --shadow-card-hover: 0 12px 32px -6px hsl(348 50% 50% / 0.22);
+    --marsala: 352.1 55.2% 62.4%;              /* #D46A78 */
+    --marsala-light: 352.3 59.7% 71.8%;        /* #E28C97 */
+    --marsala-dark: 351.7 43.4% 50.8%;         /* #B84B5A */
+    --cream: 340.0 12.3% 14.3%;                /* #292023 */
+    --cream-dark: 342.0 13.2% 14.9%;           /* #2B2124 */
+    --warm-gray: 348.8 7.6% 58.8%;             /* #9E8E91 */
+    --gold: 40.0 72.7% 55.5%;                  /* #E0A93B - Ouro Quente */
+    --gold-light: 36.4 47.8% 13.5%;            /* #332612 - Fundo Ouro Escuro */
+    --success: 144.3 36.0% 48.4%;              /* #4FA873 - Verde Escuro */
+
+    --gradient-marsala: linear-gradient(135deg, hsl(351.7 43.4% 50.8%), hsl(352.1 55.2% 62.4%));
+    --shadow-card: 0 2px 8px -1px rgba(0, 0, 0, 0.35), 0 1px 3px 0 rgba(0, 0, 0, 0.2);
+    --shadow-card-hover: 0 12px 24px -4px rgba(0, 0, 0, 0.5), 0 4px 8px -2px rgba(0, 0, 0, 0.3);
   }
 }
 
@@ -123,19 +126,31 @@
   }
 
   body {
-    @apply bg-background text-foreground font-body antialiased selection:bg-marsala/20 selection:text-foreground;
+    @apply bg-background text-foreground font-sans antialiased selection:bg-primary/20 selection:text-foreground;
     font-feature-settings: "ss01", "cv11";
     letter-spacing: -0.005em;
     line-height: 1.6;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-display text-foreground;
-    letter-spacing: -0.02em;
-    line-height: 1.25;
+  /* Fraunces exclusiva para títulos editoriais principais */
+  h1, h2 {
+    @apply font-serif text-foreground;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
   }
 
-  /* Accessibility: Respect vestibular sensitivity & Reduced Motion */
+  /* Inter para interface, subtítulos e elementos de navegação */
+  h3, h4, h5, h6 {
+    @apply font-sans text-foreground font-semibold;
+    letter-spacing: -0.015em;
+    line-height: 1.35;
+  }
+
+  input, button, select, textarea {
+    @apply font-sans;
+  }
+
+  /* Acessibilidade: Respeito à sensibilidade vestibular e movimento reduzido */
   @media (prefers-reduced-motion: reduce) {
     *,
     ::before,
@@ -147,7 +162,7 @@
     }
   }
 
-  /* Scrollbars Universais e Consistentes (Elimina Background Branco no Dark Mode) */
+  /* Scrollbars Universais e Consistentes */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -229,6 +244,12 @@
   .bg-gold-light {
     background-color: hsl(var(--gold-light));
   }
+  .text-success {
+    color: hsl(var(--success));
+  }
+  .bg-success {
+    background-color: hsl(var(--success));
+  }
   .shadow-card {
     box-shadow: var(--shadow-card);
   }
@@ -244,22 +265,6 @@
     font-feature-settings: "tnum", "cv11";
     letter-spacing: -0.02em;
     font-weight: 600;
-  }
-
-  /* Book spine bevel effect for physical aesthetic */
-  .book-spine-effect {
-    position: relative;
-  }
-  .book-spine-effect::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 6px;
-    background: linear-gradient(90deg, rgba(0, 0, 0, 0.25) 0%, rgba(255, 255, 255, 0.15) 50%, transparent 100%);
-    pointer-events: none;
-    z-index: 5;
   }
 
   .clip-path-ribbon {

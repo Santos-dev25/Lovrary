@@ -14,6 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
+        sans: ['"Inter"', 'system-ui', '-apple-system', 'sans-serif'],
+        serif: ['"Fraunces"', 'Georgia', 'serif'],
         display: ['"Fraunces"', 'Georgia', 'serif'],
         body: ['"Inter"', 'system-ui', 'sans-serif'],
       },
@@ -70,8 +72,12 @@ export default {
           DEFAULT: "hsl(var(--gold))",
           light: "hsl(var(--gold-light))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+        },
       },
       borderRadius: {
+        xl: "var(--radius)",
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
