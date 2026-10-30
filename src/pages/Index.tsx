@@ -328,27 +328,30 @@ const Index = () => {
         onMobileClose={() => setMobileOpen(false)}
       />
 
-      {/* Mobile header */}
-      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between gap-3 px-4 h-14 bg-card/90 backdrop-blur border-b border-border">
+      {/* Mobile header sticky */}
+      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between gap-3 px-4 h-14 bg-background/85 backdrop-blur-md border-b border-border w-full max-w-full">
         <button
           onClick={() => setMobileOpen(true)}
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 rounded-xl hover:bg-secondary transition-colors"
-          aria-label="Abrir menu"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 rounded-xl hover:bg-secondary text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Abrir menu de navegação"
         >
           <Menu className="w-5 h-5 text-foreground" />
         </button>
         <div className="flex items-center gap-2">
           <LovraryLogo size={26} />
-          <span className="font-display text-lg font-bold text-marsala tracking-tight">Lovrary</span>
+          <span className="font-serif text-lg font-bold text-marsala tracking-tight">Lovrary</span>
         </div>
-        <div className="w-9" />
+        <div className="w-11 flex justify-end" aria-hidden="true" />
       </header>
 
       <main
-        className={`p-4 sm:p-6 lg:p-8 transition-[margin] duration-200 ease-in-out ${sidebarCollapsed ? "md:ml-[72px]" : "md:ml-64"
-          }`}
+        className={`min-h-screen p-4 sm:p-6 lg:p-8 transition-[margin] duration-200 ease-in-out max-w-full overflow-x-hidden ${
+          sidebarCollapsed ? "md:ml-[72px]" : "md:ml-64"
+        }`}
       >
-        {renderContent()}
+        <div className="max-w-7xl mx-auto w-full">
+          {renderContent()}
+        </div>
       </main>
       {selectedBook && <BookDetailModal />}
     </div>
