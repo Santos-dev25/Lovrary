@@ -3,11 +3,13 @@ import { useBooks } from "@/context/BooksContext";
 import { vibeOptions, categoryOptions, mockBooks } from "@/data/mockBooks";
 import { searchGoogleBooks } from "@/lib/googleBooks";
 import RatingStars from "@/components/RatingStars";
-import { getReturnDeadline } from "@/utils/stats";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   X, Star, Bookmark, Quote, Plus, Trash2, CheckCircle, Play, Tag,
-  Calendar, Sparkles, PlusCircle, Feather, BookOpen, MoreHorizontal,
-  ChevronDown, Heart, Check, Clock, Library, Undo2, ArrowUpRight
+  Calendar, Sparkles, PlusCircle, Feather, MoreHorizontal,
+  ChevronDown, Check, Clock, Library, Undo2, ArrowUpRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -15,6 +17,7 @@ import { toast } from "sonner";
 type TabSection = "journal" | "review" | "quotes" | "info";
 
 export const BookDetailModal = () => {
+  const isMobile = useIsMobile();
   const {
     selectedBook: book, setSelectedBook, addNote, addReview, addQuote,
     removeQuote, setRating, setSubRating, startReading, finishReading,
@@ -40,9 +43,12 @@ export const BookDetailModal = () => {
   const [confirmDeleteBook, setConfirmDeleteBook] = useState(false);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+
+  // Sub-modals state
   const [borrowModalOpen, setBorrowModalOpen] = useState(false);
-  const [borrowPerson, setBorrowPerson] = useState("");
+  const [borrowFrom, setBorrowFrom] = useState("");
   const [borrowDate, setBorrowDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [returnDateInput, setReturnDateInput] = useState("");
   const [abandonModalOpen, setAbandonModalOpen] = useState(false);
   const [abandonPage, setAbandonPage] = useState("");
 
@@ -117,6 +123,9 @@ export const BookDetailModal = () => {
       setIsEditingReview(!book.review);
       setActionsMenuOpen(false);
       setConfirmDeleteBook(false);
+      setBorrowFrom(book.borrowedFrom || book.borrowedTo || "");
+      setBorrowDate(book.borrowedDate ? book.borrowedDate.slice(0, 10) : new Date().toISOString().slice(0, 10));
+      setReturnDateInput(book.returnDate ? book.returnDate.slice(0, 10) : "");
     }
   }, [book?.id]);
 
@@ -129,6 +138,7 @@ export const BookDetailModal = () => {
   const handleDeleteBookConfirm = () => {
     deleteBook(book.id);
     setConfirmDeleteBook(false);
+    setSelectedBook(null);
     toast.success(`"${book.title}" foi removido do seu acervo.`);
   };
 
@@ -233,1401 +243,1118 @@ export const BookDetailModal = () => {
     { id: "info", label: "Ficha Técnica", icon: Bookmark },
   ];
 
-  return (
-    <AnimatePresence>
-      <div
-        className="fixed inset-0 z-[100] bg-foreground/45 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4 md:p-6 overflow-y-auto"
-        onClick={() => setSelectedBook(null)}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: 20 }}
-          transition={{ duration: 0.22, ease: "easeOut" }}
-          onClick={(e) => e.stopPropagation()}
-          className="relative bg-card rounded-3xl border border-border shadow-2xl w-full max-w-5xl max-h-[92vh] md:max-h-[88vh] flex flex-col overflow-hidden my-auto"
-        >
-          {/* Top subtle atmosphere aura */}
-          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-gold/10 blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 rounded-full bg-marsala/10 blur-3xl pointer-events-none" />
+  const renderModalBody = () => (
+    <div className="flex flex-col h-full">
+      {/* Delete Confirmation Alert Banner */}
+      {confirmDeleteBook && (
+        <div className="bg-destructive/10 border-b border-destructive/20 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 animate-fade-in z-20 shrink-0">
+          <div className="text-left">
+            <p className="text-xs font-semibold text-destructive">
+              Tem certeza que deseja excluir "{book.title}"?
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              O livro e todo o histórico de anotações serão removidos permanentemente.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleDeleteBookConfirm}
+              className="text-xs font-semibold px-3 py-1.5 bg-destructive text-destructive-foreground rounded-lg hover:opacity-90 transition-opacity"
+            >
+              Sim, excluir livro
+            </button>
+            <button
+              onClick={() => setConfirmDeleteBook(false)}
+              className="text-xs font-medium px-3 py-1.5 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
-          {/* Close button - desktop & mobile pinned top-right */}
-          <button
-            onClick={() => setSelectedBook(null)}
-            className="absolute top-3 sm:top-4 right-3 sm:right-4 z-30 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-2xl text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
-            aria-label="Fechar modal de detalhes"
-          >
-            <X className="w-5 h-5" />
-          </button>
+      {/* Main 2-Column Responsive Body */}
+      <div className="flex-1 overflow-y-auto md:grid md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-border">
+        
+        {/* ============================================================ */}
+        {/* LEFT COLUMN: PHYSICAL BOOK SHOWCASE & ACTION HIERARCHY (~40%) */}
+        {/* ============================================================ */}
+        <div className="md:col-span-5 p-5 sm:p-7 flex flex-col items-center justify-start text-center space-y-5 bg-secondary/15">
+          
+          {/* 1. Protagonist Book Cover (clean 2:3, no fake 3D spine, no ribbon) */}
+          <div className="relative group select-none pt-1">
+            <div className="relative w-36 sm:w-44 aspect-[2/3] rounded-2xl overflow-hidden shadow-card-hover border border-border/50 transition-transform duration-300 group-hover:-translate-y-0.5 bg-secondary/30">
+              <img
+                src={book.cover}
+                alt={book.title}
+                className="w-full h-full object-cover"
+                loading="eager"
+              />
 
-          {/* Delete Confirmation Alert Banner */}
-          {confirmDeleteBook && (
-            <div className="bg-destructive/10 border-b border-destructive/20 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 animate-fade-in z-20">
-              <div className="text-left">
-                <p className="text-xs font-semibold text-destructive">
-                  Tem certeza que deseja excluir "{book.title}"?
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  O livro e todo o histórico de anotações serão removidos permanentemente.
-                </p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={handleDeleteBookConfirm}
-                  className="text-xs font-semibold px-3 py-1.5 bg-destructive text-destructive-foreground rounded-lg hover:opacity-90 transition-opacity"
-                >
-                  Sim, excluir livro
-                </button>
-                <button
-                  onClick={() => setConfirmDeleteBook(false)}
-                  className="text-xs font-medium px-3 py-1.5 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors"
-                >
-                  Cancelar
-                </button>
+              {/* Status Pill overlay on cover */}
+              <div className="absolute bottom-2.5 inset-x-2.5">
+                <span className={`block w-full text-[10px] font-bold py-1 px-2 rounded-lg text-center backdrop-blur-md border shadow-xs tracking-wider uppercase ${
+                  book.status === "lido"
+                    ? "bg-success/90 text-white border-success/30"
+                    : book.status === "lendo"
+                    ? "bg-gold/90 text-amber-950 font-bold border-gold/40"
+                    : book.status === "abandonado"
+                    ? "bg-muted/90 text-muted-foreground border-border"
+                    : book.status === "emprestado"
+                    ? "bg-sky-600/90 text-white border-sky-500/30"
+                    : "bg-card/90 text-foreground border-border/80"
+                }`}>
+                  {book.status === "lido" ? "Concluído" : book.status === "lendo" ? "Lendo Agora" : book.status === "abandonado" ? "Abandonado" : book.status === "emprestado" ? "Emprestado" : "Não Lido"}
+                </span>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Modal Main Body: 2-Column Desktop Grid with Unified Scroll */}
-          <div className="flex-1 overflow-y-auto md:grid md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-border">
-            
-            {/* ============================================================ */}
-            {/* LEFT COLUMN: PHYSICAL BOOK SHOWCASE & ACTION HIERARCHY (~38%) */}
-            {/* ============================================================ */}
-            <div className="md:col-span-5 p-5 sm:p-7 flex flex-col items-center justify-start text-center space-y-5 bg-secondary/15">
-              
-              {/* 1. Physical Book Cover with 3D Spine and Ribbon */}
-              <div className="relative group select-none pt-2">
-                {/* Book ambient floor shadow */}
-                <div className="absolute -bottom-3 inset-x-2 h-6 bg-black/35 dark:bg-black/70 blur-md rounded-full" />
+          {/* 2. Star Rating Bar */}
+          <div className="space-y-1 w-full flex flex-col items-center">
+            <div className="flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-card border border-border shadow-2xs">
+              <RatingStars
+                value={book.rating || 0}
+                onChange={(newRating) => {
+                  setRating(book.id, newRating);
+                  toast.success(`Nota atualizada para ${newRating.toFixed(1)} estrelas! ⭐`);
+                }}
+                size="md"
+                showValue
+              />
+            </div>
+            <span className="text-[11px] text-muted-foreground font-sans">Avaliação pessoal (0.5 a 5.0 estrelas)</span>
+          </div>
 
-                <div className="relative w-36 sm:w-44 aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl book-spine-effect border border-white/20 transition-transform duration-300 group-hover:-translate-y-1">
-                  <img
-                    src={book.cover}
-                    alt={book.title}
-                    className="w-full h-full object-cover"
-                    loading="eager"
-                  />
+          {/* 3. Reading Progress Ruler (when reading or has progress) */}
+          <div className="w-full bg-card rounded-2xl p-4 border border-border/80 shadow-2xs space-y-2 text-left">
+            <div className="flex items-center justify-between text-xs font-numeric">
+              <span className="font-semibold text-foreground">
+                Página {book.currentPage || 0} de {book.totalPages || "?"}
+              </span>
+              <span className="font-bold text-primary">
+                {book.progress || 0}%
+              </span>
+            </div>
 
-                  {/* Golden Bookmark Ribbon */}
-                  <div className="absolute -top-1 right-4 w-5 h-9 bg-gold shadow-md clip-path-ribbon z-10" />
+            <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(book.progress || 0, 100)}%` }}
+                className="h-full bg-primary rounded-full transition-all duration-300"
+              />
+            </div>
 
-                  {/* Reading Status Pill overlay on cover */}
-                  <div className="absolute bottom-2.5 inset-x-2.5">
-                    <span className={`block w-full text-[10px] font-bold py-1 px-2 rounded-lg text-center backdrop-blur-md border shadow-xs tracking-wider uppercase ${
-                      book.status === "lido"
-                        ? "bg-marsala/90 text-primary-foreground border-white/20"
-                        : book.status === "lendo"
-                        ? "bg-gold/90 text-amber-950 font-bold border-gold/40"
-                        : "bg-card/90 text-muted-foreground border-border/80"
-                    }`}>
-                      {book.status === "lido" ? "Concluído" : book.status === "lendo" ? "Lendo Agora" : "Não Lido"}
-                    </span>
-                  </div>
-                </div>
+            {/* Quick page update inline */}
+            <div className="flex items-center gap-1.5 pt-1">
+              <input
+                type="number"
+                min={0}
+                max={book.totalPages || undefined}
+                placeholder="Pág..."
+                value={pageInput}
+                onChange={(e) => setPageInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleUpdatePage()}
+                className="w-full text-xs px-2.5 py-1.5 bg-background border border-input rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <button
+                onClick={handleUpdatePage}
+                disabled={!pageInput}
+                className="shrink-0 text-xs px-3 py-1.5 rounded-xl bg-primary text-primary-foreground font-semibold disabled:opacity-40 hover:bg-primary/90 transition-opacity shadow-xs"
+              >
+                Atualizar
+              </button>
+            </div>
+          </div>
+
+          {/* 4. Action Hierarchy: Primary CTA + Secondary Actions */}
+          <div className="w-full space-y-2 pt-1">
+            {/* Primary CTA button */}
+            {book.ownership === "pretendo" ? (
+              <button
+                onClick={() => {
+                  moveToAcervo(book.id);
+                  toast.success(`"${book.title}" adicionado ao seu acervo na estante! 📚`);
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 transition-opacity flex items-center justify-center gap-2"
+              >
+                <Library className="w-4 h-4" />
+                <span>Mover para o Acervo</span>
+              </button>
+            ) : book.status === "nao-lido" ? (
+              <button
+                onClick={() => {
+                  startReading(book.id);
+                  toast.success(`Boa leitura de "${book.title}"! 📖`);
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 transition-opacity flex items-center justify-center gap-2"
+              >
+                <Play className="w-4 h-4 fill-current" />
+                <span>Começar a Ler Agora</span>
+              </button>
+            ) : book.status === "lendo" ? (
+              <div className="space-y-2 w-full">
+                <button
+                  onClick={() => {
+                    finishReading(book.id);
+                    toast.success(`Parabéns! Leitura de "${book.title}" concluída! 🎉`);
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 transition-opacity flex items-center justify-center gap-2"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Marcar como Concluído</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setAbandonPage(String(book.currentPage || 0));
+                    setAbandonModalOpen(true);
+                  }}
+                  className="w-full py-2 px-3 rounded-xl bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80 text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Undo2 className="w-3.5 h-3.5" />
+                  <span>Desisti deste livro (Abandonar)</span>
+                </button>
               </div>
+            ) : (
+              <button
+                onClick={() => {
+                  startReading(book.id);
+                  toast.success(`Releitura de "${book.title}" iniciada! 📖`);
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-card border border-border hover:bg-secondary text-foreground text-xs font-semibold shadow-2xs transition-colors flex items-center justify-center gap-2"
+              >
+                <Undo2 className="w-4 h-4 text-primary" />
+                <span>Iniciar Releitura</span>
+              </button>
+            )}
 
-              {/* 2. Star Rating Bar */}
-              <div className="space-y-1 w-full flex flex-col items-center">
-                <div className="flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-card border border-border shadow-2xs">
-                  <RatingStars
-                    value={book.rating || 0}
-                    onChange={(newRating) => {
-                      setRating(book.id, newRating);
-                      toast.success(`Nota atualizada para ${newRating.toFixed(1)} estrelas! ⭐`);
-                    }}
-                    size="md"
-                    showValue
-                  />
-                </div>
-                <span className="text-[11px] text-muted-foreground">Avaliação pessoal (0.5 a 5.0 estrelas)</span>
-              </div>
+            {/* Secondary Actions Row */}
+            <div className="flex items-center gap-2 w-full">
+              {book.status === "nao-lido" && book.ownership === "tenho" && (
+                <button
+                  onClick={() => {
+                    addToQueue(book.id);
+                    toast.success(`"${book.title}" adicionado à sua fila de próxima leitura! 🔖`);
+                  }}
+                  className="flex-1 py-2 px-3 rounded-xl bg-card border border-border text-foreground hover:bg-secondary text-xs font-medium transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
+                >
+                  <Bookmark className="w-3.5 h-3.5 text-gold" />
+                  <span>Fila de Leitura</span>
+                </button>
+              )}
 
-              {/* 3. Reading Progress Ruler (when reading or has progress) */}
-              <div className="w-full bg-card rounded-2xl p-4 border border-border/80 shadow-2xs space-y-2 text-left">
-                <div className="flex items-center justify-between text-xs font-numeric">
-                  <span className="font-semibold text-foreground">
-                    Página {book.currentPage || 0} de {book.totalPages || "?"}
-                  </span>
-                  <span className="font-bold text-marsala">
-                    {book.progress || 0}%
-                  </span>
-                </div>
+              {/* Peguei Emprestado direct button */}
+              {book.ownership === "tenho" && book.status !== "emprestado" && (
+                <button
+                  onClick={() => {
+                    setBorrowFrom(book.borrowedFrom || book.borrowedTo || "");
+                    setBorrowDate(book.borrowedDate ? book.borrowedDate.slice(0, 10) : new Date().toISOString().slice(0, 10));
+                    setReturnDateInput(book.returnDate ? book.returnDate.slice(0, 10) : "");
+                    setBorrowModalOpen(true);
+                  }}
+                  className="flex-1 py-2 px-3 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-700 dark:text-sky-300 hover:bg-sky-500/20 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
+                  title="Registrar que peguei este livro emprestado"
+                >
+                  <ArrowUpRight className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                  <span>Peguei Emprestado</span>
+                </button>
+              )}
 
-                <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(book.progress || 0, 100)}%` }}
-                    className="h-full gradient-marsala rounded-full"
-                  />
-                </div>
+              {/* Discreet Dropdown Menu for options */}
+              <div className="relative flex-1">
+                <button
+                  onClick={() => setActionsMenuOpen(!actionsMenuOpen)}
+                  className="w-full py-2 px-3 rounded-xl bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary text-xs font-medium transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                  <span>Mais</span>
+                  <ChevronDown className="w-3 h-3 ml-auto opacity-60" />
+                </button>
 
-                {/* Quick page update inline */}
-                <div className="flex items-center gap-1.5 pt-1">
-                  <input
-                    type="number"
-                    min={0}
-                    max={book.totalPages || undefined}
-                    placeholder="Pág..."
-                    value={pageInput}
-                    onChange={(e) => setPageInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleUpdatePage()}
-                    className="w-full text-xs px-2.5 py-1.5 bg-secondary/50 border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-marsala"
-                  />
-                  <button
-                    onClick={handleUpdatePage}
-                    disabled={!pageInput}
-                    className="shrink-0 text-xs px-3 py-1.5 rounded-lg gradient-marsala text-primary-foreground font-semibold disabled:opacity-40 hover:opacity-95 transition-opacity"
-                  >
-                    Atualizar
-                  </button>
-                </div>
-              </div>
-
-              {/* 4. Action Hierarchy: Primary CTA + Secondary Actions */}
-              <div className="w-full space-y-2 pt-1">
-                {/* Primary CTA button with prominent contrast */}
-                {book.ownership === "pretendo" ? (
-                  <button
-                    onClick={() => {
-                      moveToAcervo(book.id);
-                      toast.success(`"${book.title}" adicionado ao seu acervo na estante! 📚`);
-                    }}
-                    className="w-full py-2.5 px-4 rounded-xl gradient-marsala text-primary-foreground text-xs font-bold shadow-sm hover:opacity-95 transition-opacity flex items-center justify-center gap-2"
-                  >
-                    <Library className="w-4 h-4" />
-                    <span>Mover para o Acervo</span>
-                  </button>
-                ) : book.status === "nao-lido" ? (
-                  <button
-                    onClick={() => {
-                      startReading(book.id);
-                      toast.success(`Boa leitura de "${book.title}"! 📖`);
-                    }}
-                    className="w-full py-2.5 px-4 rounded-xl gradient-marsala text-primary-foreground text-xs font-bold shadow-sm hover:opacity-95 transition-opacity flex items-center justify-center gap-2"
-                  >
-                    <Play className="w-4 h-4 fill-current" />
-                    <span>Começar a Ler Agora</span>
-                  </button>
-                ) : book.status === "lendo" ? (
-                  <div className="space-y-2 w-full">
+                {actionsMenuOpen && (
+                  <div className="absolute bottom-full mb-1 left-0 right-0 z-40 bg-card border border-border rounded-2xl shadow-xl p-2 space-y-1 text-left animate-fade-in">
                     <button
                       onClick={() => {
-                        finishReading(book.id);
-                        toast.success(`Parabéns! Leitura de "${book.title}" concluída! 🎉`);
+                        updateBook(book.id, {
+                          ownership: book.ownership === "tenho" ? "pretendo" : "tenho"
+                        });
+                        setActionsMenuOpen(false);
+                        toast.success("Posse do livro atualizada!");
                       }}
-                      className="w-full py-2.5 px-4 rounded-xl gradient-marsala text-primary-foreground text-xs font-bold shadow-sm hover:opacity-95 transition-opacity flex items-center justify-center gap-2"
+                      className="w-full text-left text-xs px-3 py-2 rounded-xl hover:bg-secondary text-foreground flex items-center gap-2"
                     >
-                      <CheckCircle className="w-4 h-4" />
-                      <span>Marcar como Concluído</span>
+                      <Library className="w-3.5 h-3.5 text-primary" />
+                      <span>
+                        {book.ownership === "tenho" ? "Mover p/ Lista de Desejos" : "Já possuo este livro"}
+                      </span>
                     </button>
+
+                    <button
+                      onClick={() => {
+                        const nextStatus = book.status === "lido" ? "nao-lido" : "lido";
+                        const today = new Date().toISOString().slice(0, 10);
+                        updateBook(book.id, {
+                          status: nextStatus,
+                          ...(nextStatus === "lido"
+                            ? {
+                                dateFinished: book.dateFinished || today,
+                                currentPage: book.currentPage > 0 ? book.currentPage : (book.totalPages || 0),
+                              }
+                            : {}),
+                        });
+                        setActionsMenuOpen(false);
+                        toast.success(`Status alterado para: ${nextStatus === "lido" ? "Lido" : "Não lido"}`);
+                      }}
+                      className="w-full text-left text-xs px-3 py-2 rounded-xl hover:bg-secondary text-foreground flex items-center gap-2"
+                    >
+                      <Check className="w-3.5 h-3.5 text-gold" />
+                      <span>
+                        {book.status === "lido" ? "Marcar como Não Lido" : "Marcar como Lido diretamente"}
+                      </span>
+                    </button>
+
+                    <div className="border-t border-border my-1" />
+
+                    <button
+                      onClick={() => {
+                        setConfirmDeleteBook(true);
+                        setActionsMenuOpen(false);
+                      }}
+                      className="w-full text-left text-xs px-3 py-2 rounded-xl text-destructive hover:bg-destructive/10 flex items-center gap-2 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Excluir livro do acervo</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Ownership info badge */}
+          <div className="pt-2 text-[11px] text-muted-foreground flex items-center gap-1.5 font-sans">
+            <span className="w-2 h-2 rounded-full bg-success/80" />
+            <span>{book.ownership === "tenho" ? "Exemplar presente na sua estante" : "Item na lista de desejos"}</span>
+          </div>
+        </div>
+
+        {/* ============================================================ */}
+        {/* RIGHT COLUMN: REFINED EDITORIAL TABS & CONTENT (~60%)         */}
+        {/* ============================================================ */}
+        <div className="md:col-span-7 flex flex-col min-w-0">
+          
+          {/* Header: Status Pill, Category Tag, Title, Author */}
+          <div className="p-5 sm:p-7 pb-4 border-b border-border space-y-2">
+            <div className="flex flex-wrap items-center gap-2 pr-6">
+              {/* Status Selector Pill with Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
+                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border transition-all ${
+                    book.status === "lido"
+                      ? "bg-success/15 text-success border-success/30 hover:bg-success hover:text-white"
+                      : book.status === "lendo"
+                      ? "bg-gold/15 text-gold border-gold/30 hover:bg-gold hover:text-amber-950"
+                      : book.status === "abandonado"
+                      ? "bg-muted text-muted-foreground border-border hover:bg-muted/80"
+                      : book.status === "emprestado"
+                      ? "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/40 hover:bg-sky-600 hover:text-white"
+                      : "bg-secondary text-secondary-foreground border-border hover:bg-secondary/80"
+                  }`}
+                  title="Clique para alterar o status do livro"
+                >
+                  {book.status === "lido" && <Check className="w-3 h-3 text-gold" />}
+                  {book.status === "lendo" && <Play className="w-3 h-3 fill-current" />}
+                  {book.status === "abandonado" && <Undo2 className="w-3 h-3" />}
+                  {book.status === "emprestado" && <ArrowUpRight className="w-3 h-3 text-sky-600 dark:text-sky-400" />}
+                  {book.status === "nao-lido" && <Library className="w-3 h-3" />}
+                  <span>
+                    {book.status === "lido"
+                      ? "Status: Lido"
+                      : book.status === "lendo"
+                      ? "Status: Lendo"
+                      : book.status === "abandonado"
+                      ? "Status: Desisti / Abandonado"
+                      : book.status === "emprestado"
+                      ? (book.borrowedTo ? `Emprestado (${book.borrowedTo})` : "Status: Emprestado")
+                      : "Status: Na Estante"}
+                  </span>
+                  <ChevronDown className="w-3 h-3 opacity-70" />
+                </button>
+
+                {statusDropdownOpen && (
+                  <div className="absolute left-0 top-full mt-1.5 z-50 bg-card border border-border rounded-2xl shadow-xl p-2 w-56 space-y-1 animate-fade-in text-left">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-2 py-1">
+                      Alterar Status
+                    </p>
+                    
+                    <button
+                      onClick={() => {
+                        updateBook(book.id, { status: "nao-lido" });
+                        setStatusDropdownOpen(false);
+                        toast.success("Livro marcado como Na Estante!");
+                      }}
+                      className="w-full text-left text-xs px-2.5 py-1.5 rounded-xl hover:bg-secondary flex items-center gap-2 text-foreground"
+                    >
+                      <Library className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>Na Estante (Não lido)</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        startReading(book.id);
+                        setStatusDropdownOpen(false);
+                        toast.success("Leitura iniciada! 📖");
+                      }}
+                      className="w-full text-left text-xs px-2.5 py-1.5 rounded-xl hover:bg-secondary flex items-center gap-2 text-foreground"
+                    >
+                      <Play className="w-3.5 h-3.5 text-gold fill-gold" />
+                      <span>Lendo Agora</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        const today = new Date().toISOString().slice(0, 10);
+                        updateBook(book.id, {
+                          status: "lido",
+                          dateFinished: book.dateFinished || today,
+                          currentPage: book.currentPage > 0 ? book.currentPage : (book.totalPages || 0),
+                        });
+                        setStatusDropdownOpen(false);
+                        toast.success("Livro marcado como Concluído! 🎉");
+                      }}
+                      className="w-full text-left text-xs px-2.5 py-1.5 rounded-xl hover:bg-secondary flex items-center gap-2 text-foreground"
+                    >
+                      <Check className="w-3.5 h-3.5 text-success font-bold" />
+                      <span>Lido (Concluído)</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setBorrowFrom(book.borrowedFrom || book.borrowedTo || "");
+                        setBorrowDate(book.borrowedDate ? book.borrowedDate.slice(0, 10) : new Date().toISOString().slice(0, 10));
+                        setReturnDateInput(book.returnDate ? book.returnDate.slice(0, 10) : "");
+                        setBorrowModalOpen(true);
+                        setStatusDropdownOpen(false);
+                      }}
+                      className="w-full text-left text-xs px-2.5 py-1.5 rounded-xl hover:bg-secondary flex items-center gap-2 text-sky-700 dark:text-sky-300 font-medium"
+                    >
+                      <ArrowUpRight className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                      <span>Peguei Emprestado...</span>
+                    </button>
+
                     <button
                       onClick={() => {
                         setAbandonPage(String(book.currentPage || 0));
                         setAbandonModalOpen(true);
+                        setStatusDropdownOpen(false);
                       }}
-                      className="w-full py-2 px-3 rounded-xl bg-card border border-border hover:bg-secondary text-muted-foreground hover:text-foreground text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                      className="w-full text-left text-xs px-2.5 py-1.5 rounded-xl hover:bg-secondary flex items-center gap-2 text-muted-foreground font-medium"
                     >
                       <Undo2 className="w-3.5 h-3.5" />
-                      <span>Desisti deste livro (Abandonar)</span>
+                      <span>Desisti do Livro (Abandonar)...</span>
                     </button>
                   </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      startReading(book.id);
-                      toast.success(`Releitura de "${book.title}" iniciada! 📖`);
-                    }}
-                    className="w-full py-2.5 px-4 rounded-xl bg-card border border-border hover:bg-secondary text-foreground text-xs font-bold shadow-2xs transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Undo2 className="w-4 h-4 text-marsala" />
-                    <span>Iniciar Releitura</span>
-                  </button>
                 )}
-
-                {/* Secondary Actions Row */}
-                <div className="flex items-center gap-2 w-full">
-                  {book.status === "nao-lido" && book.ownership === "tenho" && (
-                    <button
-                      onClick={() => {
-                        addToQueue(book.id);
-                        toast.success(`"${book.title}" adicionado à sua fila de próxima leitura! 🔖`);
-                      }}
-                      className="flex-1 py-2 px-3 rounded-xl bg-card border border-border text-foreground hover:bg-secondary text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
-                    >
-                      <Bookmark className="w-3.5 h-3.5 text-gold" />
-                      <span>Fila de Leitura</span>
-                    </button>
-                  )}
-
-                  {/* Botão Emprestar direto */}
-                  {book.ownership === "tenho" && book.status !== "emprestado" && (
-                    <button
-                      onClick={() => {
-                        setBorrowPerson(book.borrowedTo || "");
-                        setBorrowDate(book.borrowedDate ? book.borrowedDate.slice(0, 10) : new Date().toISOString().slice(0, 10));
-                        setBorrowModalOpen(true);
-                      }}
-                      className="flex-1 py-2 px-3 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-700 dark:text-sky-300 hover:bg-sky-500/20 text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
-                      title="Registrar que peguei este livro emprestado"
-                    >
-                      <ArrowUpRight className="w-3.5 h-3.5 text-sky-600" />
-                      <span>Peguei Emprestado</span>
-                    </button>
-                  )}
-
-                  {/* Discreet Dropdown Menu for secondary / destructive management */}
-                  <div className="relative flex-1">
-                    <button
-                      onClick={() => setActionsMenuOpen(!actionsMenuOpen)}
-                      className="w-full py-2 px-3 rounded-xl bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
-                    >
-                      <MoreHorizontal className="w-4 h-4" />
-                      <span>Mais Opções</span>
-                      <ChevronDown className="w-3 h-3 ml-auto opacity-60" />
-                    </button>
-
-                    {actionsMenuOpen && (
-                      <div className="absolute bottom-full mb-1 left-0 right-0 z-40 bg-card border border-border rounded-2xl shadow-xl p-2 space-y-1 text-left animate-fade-in">
-                        <button
-                          onClick={() => {
-                            updateBook(book.id, {
-                              ownership: book.ownership === "tenho" ? "pretendo" : "tenho"
-                            });
-                            setActionsMenuOpen(false);
-                            toast.success("Posse do livro atualizada!");
-                          }}
-                          className="w-full text-left text-xs px-3 py-2 rounded-xl hover:bg-secondary text-foreground flex items-center gap-2"
-                        >
-                          <Library className="w-3.5 h-3.5 text-marsala" />
-                          <span>
-                            {book.ownership === "tenho" ? "Mover p/ Lista de Desejos" : "Já possuo este livro"}
-                          </span>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            const nextStatus = book.status === "lido" ? "nao-lido" : "lido";
-                            const today = new Date().toISOString().slice(0, 10);
-                            updateBook(book.id, {
-                              status: nextStatus,
-                              ...(nextStatus === "lido"
-                                ? {
-                                    dateFinished: book.dateFinished || today,
-                                    currentPage: book.currentPage > 0 ? book.currentPage : (book.totalPages || 0),
-                                  }
-                                : {}),
-                            });
-                            setActionsMenuOpen(false);
-                            toast.success(`Status alterado para: ${nextStatus === "lido" ? "Lido" : "Não lido"}`);
-                          }}
-                          className="w-full text-left text-xs px-3 py-2 rounded-xl hover:bg-secondary text-foreground flex items-center gap-2"
-                        >
-                          <Check className="w-3.5 h-3.5 text-gold" />
-                          <span>
-                            {book.status === "lido" ? "Marcar como Não Lido" : "Marcar como Lido diretamente"}
-                          </span>
-                        </button>
-
-                        <div className="border-t border-border my-1" />
-
-                        <button
-                          onClick={() => {
-                            setConfirmDeleteBook(true);
-                            setActionsMenuOpen(false);
-                          }}
-                          className="w-full text-left text-xs px-3 py-2 rounded-xl text-destructive hover:bg-destructive/10 flex items-center gap-2 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Excluir livro do acervo</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
               </div>
 
-              {/* Ownership info badge */}
-              <div className="pt-2 text-[11px] text-muted-foreground flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500/80" />
-                <span>{book.ownership === "tenho" ? "Exemplar presente na sua estante" : "Item na lista de desejos"}</span>
-              </div>
-            </div>
-
-            {/* ============================================================ */}
-            {/* RIGHT COLUMN: REFINED EDITORIAL TABS & CONTENT (~62%)         */}
-            {/* ============================================================ */}
-            <div className="md:col-span-7 flex flex-col min-w-0">
-              
-              {/* Header: Title, Author, Classification Tag */}
-              <div className="p-5 sm:p-7 pb-4 border-b border-border space-y-2">
-                <div className="flex flex-wrap items-center gap-2 pr-8">
-                  {/* Status Selector Pill with Dropdown */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
-                      className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border transition-all ${
-                        book.status === "lido"
-                          ? "bg-marsala/15 text-marsala border-marsala/40 hover:bg-marsala hover:text-white"
-                          : book.status === "lendo"
-                          ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/40 hover:bg-amber-500 hover:text-white"
-                          : book.status === "abandonado"
-                          ? "bg-muted text-muted-foreground border-border hover:bg-muted/80"
-                          : book.status === "emprestado"
-                          ? "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/40 hover:bg-sky-600 hover:text-white"
-                          : "bg-secondary text-foreground/80 border-border hover:bg-secondary/80"
-                      }`}
-                      title="Clique para alterar o status do livro"
-                    >
-                      {book.status === "lido" && <Check className="w-3 h-3 text-gold" />}
-                      {book.status === "lendo" && <Play className="w-3 h-3 fill-current" />}
-                      {book.status === "abandonado" && <Undo2 className="w-3 h-3" />}
-                      {book.status === "emprestado" && <ArrowUpRight className="w-3 h-3 text-sky-600" />}
-                      {book.status === "nao-lido" && <Library className="w-3 h-3" />}
-                      <span>
-                        {book.status === "lido"
-                          ? "Status: Lido"
-                          : book.status === "lendo"
-                          ? "Status: Lendo"
-                          : book.status === "abandonado"
-                          ? "Status: Desisti / Abandonado"
-                          : book.status === "emprestado"
-                          ? (book.borrowedTo ? `Emprestado (${book.borrowedTo})` : "Status: Emprestado")
-                          : "Status: Na Estante"}
-                      </span>
-                      <ChevronDown className="w-3 h-3 opacity-70" />
-                    </button>
-
-                    {statusDropdownOpen && (
-                      <div className="absolute left-0 top-full mt-1.5 z-50 bg-card border border-border rounded-2xl shadow-xl p-2 w-56 space-y-1 animate-fade-in text-left">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-2 py-1">
-                          Alterar Status
-                        </p>
-                        
-                        <button
-                          onClick={() => {
-                            updateBook(book.id, { status: "nao-lido" });
-                            setStatusDropdownOpen(false);
-                            toast.success("Livro marcado como Na Estante!");
-                          }}
-                          className="w-full text-left text-xs px-2.5 py-1.5 rounded-xl hover:bg-secondary flex items-center gap-2 text-foreground"
-                        >
-                          <Library className="w-3.5 h-3.5 text-muted-foreground" />
-                          <span>Na Estante (Não lido)</span>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            startReading(book.id);
-                            setStatusDropdownOpen(false);
-                            toast.success("Leitura iniciada! 📖");
-                          }}
-                          className="w-full text-left text-xs px-2.5 py-1.5 rounded-xl hover:bg-secondary flex items-center gap-2 text-foreground"
-                        >
-                          <Play className="w-3.5 h-3.5 text-gold fill-gold" />
-                          <span>Lendo Agora</span>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            const today = new Date().toISOString().slice(0, 10);
-                            updateBook(book.id, {
-                              status: "lido",
-                              dateFinished: book.dateFinished || today,
-                              currentPage: book.currentPage > 0 ? book.currentPage : (book.totalPages || 0),
-                            });
-                            setStatusDropdownOpen(false);
-                            toast.success("Livro marcado como Concluído! 🎉");
-                          }}
-                          className="w-full text-left text-xs px-2.5 py-1.5 rounded-xl hover:bg-secondary flex items-center gap-2 text-foreground"
-                        >
-                          <Check className="w-3.5 h-3.5 text-marsala font-bold" />
-                          <span>Lido (Concluído)</span>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            setBorrowPerson(book.borrowedTo || "");
-                            setBorrowDate(book.borrowedDate ? book.borrowedDate.slice(0, 10) : new Date().toISOString().slice(0, 10));
-                            setBorrowModalOpen(true);
-                            setStatusDropdownOpen(false);
-                          }}
-                          className="w-full text-left text-xs px-2.5 py-1.5 rounded-xl hover:bg-secondary flex items-center gap-2 text-sky-700 dark:text-sky-300 font-medium"
-                        >
-                          <ArrowUpRight className="w-3.5 h-3.5 text-sky-600" />
-                          <span>Peguei Emprestado...</span>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            setAbandonPage(String(book.currentPage || 0));
-                            setAbandonModalOpen(true);
-                            setStatusDropdownOpen(false);
-                          }}
-                          className="w-full text-left text-xs px-2.5 py-1.5 rounded-xl hover:bg-secondary flex items-center gap-2 text-muted-foreground font-medium"
-                        >
-                          <Undo2 className="w-3.5 h-3.5" />
-                          <span>Desisti do Livro (Abandonar)...</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Category Selector Pill with Dropdown */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setGenreDropdownOpen(!genreDropdownOpen)}
-                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border border-marsala/40 bg-marsala/10 text-marsala hover:bg-marsala hover:text-primary-foreground transition-all"
-                      title="Clique para alterar a classificação"
-                    >
-                      <Tag className="w-3 h-3" />
-                      <span>{book.category || "Definir classificação"}</span>
-                      <ChevronDown className="w-3 h-3 opacity-70" />
-                    </button>
-
-                    {genreDropdownOpen && (
-                      <div className="absolute left-0 top-full mt-1.5 z-50 bg-card border border-border rounded-2xl shadow-xl p-3 w-60 space-y-2 animate-fade-in">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                          Classificação Literária
-                        </p>
-                        <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
-                          {allClassifications.map((cat) => (
-                            <button
-                              key={cat}
-                              onClick={() => handleSelectGenre(cat)}
-                              className={`w-full text-left text-xs px-2.5 py-1.5 rounded-lg transition-colors ${
-                                book.category === cat
-                                  ? "gradient-marsala text-primary-foreground font-semibold"
-                                  : "hover:bg-secondary text-foreground"
-                              }`}
-                            >
-                              {cat}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="pt-2 border-t border-border flex gap-1">
-                          <input
-                            type="text"
-                            placeholder="Novo gênero..."
-                            value={customGenreInput}
-                            onChange={(e) => setCustomGenreInput(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleAddCustomGenre()}
-                            className="flex-1 text-xs px-2.5 py-1 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground"
-                          />
-                          <button
-                            onClick={handleAddCustomGenre}
-                            className="text-xs px-2.5 py-1 gradient-marsala text-primary-foreground rounded-lg font-bold"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Vibes preview tags */}
-                  {book.vibes && book.vibes.slice(0, 2).map((vibe) => (
-                    <span
-                      key={vibe}
-                      className="text-xs px-2.5 py-0.5 rounded-full bg-secondary text-muted-foreground border border-border"
-                    >
-                      {vibe}
-                    </span>
-                  ))}
-                </div>
-
-                <h1
-                  translate="no"
-                  className="notranslate text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight leading-tight pr-6"
+              {/* Category Selector Pill with Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setGenreDropdownOpen(!genreDropdownOpen)}
+                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-all"
+                  title="Clique para alterar a classificação"
                 >
-                  {book.title}
-                </h1>
-                <p
-                  translate="no"
-                  className="notranslate text-sm text-muted-foreground font-medium"
-                >
-                  por <span className="text-foreground font-semibold">{book.author || "Autor desconhecido"}</span>
-                </p>
-              </div>
+                  <Tag className="w-3 h-3" />
+                  <span>{book.category || "Definir classificação"}</span>
+                  <ChevronDown className="w-3 h-3 opacity-70" />
+                </button>
 
-              {/* Clean Editorial Navigation Tabs */}
-              <div className="flex border-b border-border bg-card/60 overflow-x-auto scrollbar-hide px-3 sm:px-6">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`whitespace-nowrap flex items-center gap-2 py-3 px-3 sm:px-4 text-xs font-semibold border-b-2 transition-all ${
-                        isActive
-                          ? "border-marsala text-marsala font-bold bg-secondary/30"
-                          : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-                      }`}
-                    >
-                      <Icon className={`w-3.5 h-3.5 ${isActive ? "text-marsala" : "text-muted-foreground"}`} />
-                      <span>{tab.label}</span>
-                      {typeof tab.count === "number" && tab.count > 0 && (
-                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                          isActive ? "bg-marsala/15 text-marsala font-bold" : "bg-secondary text-muted-foreground"
-                        }`}>
-                          {tab.count}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Tab Content Panels */}
-              <div className="p-5 sm:p-7 overflow-y-auto max-h-[58vh] md:max-h-[54vh] space-y-6">
-
-                {/* -------------------------------------------------------- */}
-                {/* 1. JOURNAL TAB: LINED NOTEBOOK STYLING                  */}
-                {/* -------------------------------------------------------- */}
-                {activeTab === "journal" && (
-                  <div className="space-y-6 animate-fade-in">
-                    
-                    {/* Add Note Card with Notebook Feel */}
-                    <div className="rounded-2xl bg-card border border-border/90 p-4 sm:p-5 shadow-xs space-y-3 relative overflow-hidden">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Feather className="w-4 h-4 text-marsala" />
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                            Nova Entrada no Diário
-                          </h3>
-                        </div>
-                        <span className="text-[11px] text-muted-foreground">Caderno de Leitura</span>
-                      </div>
-
+                {genreDropdownOpen && (
+                  <div className="absolute left-0 top-full mt-1.5 z-50 bg-card border border-border rounded-2xl shadow-xl p-3 w-60 space-y-2 animate-fade-in">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                      Classificação Literária
+                    </p>
+                    <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+                      {allClassifications.map((cat) => (
+                        <button
+                          key={cat}
+                          onClick={() => handleSelectGenre(cat)}
+                          className={`w-full text-left text-xs px-2.5 py-1.5 rounded-lg transition-colors ${
+                            book.category === cat
+                              ? "bg-primary text-primary-foreground font-semibold"
+                              : "hover:bg-secondary text-foreground"
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="pt-2 border-t border-border flex gap-1">
                       <input
-                        placeholder="Capítulo ou página de referência (ex: Cap. 4, Pág. 72)"
-                        value={noteChapter}
-                        onChange={(e) => setNoteChapter(e.target.value)}
-                        className="w-full text-xs px-3 py-2 bg-secondary/40 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-marsala"
+                        type="text"
+                        placeholder="Novo gênero..."
+                        value={customGenreInput}
+                        onChange={(e) => setCustomGenreInput(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleAddCustomGenre()}
+                        className="flex-1 text-xs px-2.5 py-1 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                       />
-
-                      {/* Textarea with lined journal paper styling */}
-                      <div className="relative rounded-xl border border-border/80 bg-card overflow-hidden">
-                        <textarea
-                          placeholder="Escreva suas impressões, sentimentos e teorias deste capítulo..."
-                          value={noteText}
-                          onChange={(e) => setNoteText(e.target.value)}
-                          className="w-full text-xs sm:text-sm px-4 py-3 bg-transparent text-foreground placeholder:text-muted-foreground/70 min-h-[110px] resize-none focus:outline-none notebook-ruled font-serif leading-7"
-                        />
-                      </div>
-
-                      <div className="flex justify-end pt-1">
-                        <button
-                          onClick={handleAddNote}
-                          disabled={!noteText.trim()}
-                          className="flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl gradient-marsala text-primary-foreground disabled:opacity-40 shadow-xs hover:opacity-95 transition-opacity"
-                        >
-                          <Feather className="w-3.5 h-3.5" />
-                          <span>Registrar no Diário</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Journal Entries Timeline */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                          Passagens & Reflexões ({(book.notes || []).length})
-                        </h4>
-                      </div>
-
-                      {(book.notes || []).length > 0 ? (
-                        <div className="space-y-3">
-                          {(book.notes || []).slice().reverse().map((note, i) => (
-                            <motion.div
-                              key={note.id || i}
-                              initial={{ opacity: 0, y: 6 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              className="relative rounded-2xl bg-card border border-border/80 p-4 sm:p-5 shadow-2xs hover:shadow-xs transition-shadow group flex items-start justify-between gap-4 border-l-4 border-l-marsala/70"
-                            >
-                              <div className="flex-1 min-w-0 space-y-2">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-[11px] font-bold text-marsala bg-marsala/10 px-2.5 py-0.5 rounded-full border border-marsala/20">
-                                    {note.chapter || "Anotação"}
-                                  </span>
-                                  <span className="text-[11px] text-muted-foreground font-numeric flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
-                                    {note.date} às {note.time}
-                                  </span>
-                                </div>
-                                <p
-                                  translate="no"
-                                  className="notranslate text-xs sm:text-sm text-foreground/90 font-serif leading-relaxed whitespace-pre-wrap pl-1"
-                                >
-                                  {note.text}
-                                </p>
-                              </div>
-
-                              <button
-                                onClick={() => {
-                                  const noteToDelete = note;
-                                  deleteNote(book.id, note.id);
-                                  toast.success("Anotação removida do diário.", {
-                                    action: {
-                                      label: "Desfazer",
-                                      onClick: () => {
-                                        addNote(book.id, noteToDelete);
-                                      },
-                                    },
-                                  });
-                                }}
-                                className="opacity-70 group-hover:opacity-100 min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all shrink-0"
-                                title="Excluir anotação"
-                                aria-label="Excluir anotação"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                                  {/* Modal Peguei Emprestado */}
-      {borrowModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-card border border-border rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="font-display font-bold text-sm text-foreground flex items-center gap-2">
-                <ArrowUpRight className="w-4 h-4 text-indigo-600" />
-                Peguei Emprestado
-              </h4>
-              <button onClick={() => setBorrowModalOpen(false)} className="text-muted-foreground hover:text-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Registre a procedência de &quot;{book.title}&quot;. Ele não contará no seu acervo físico permanente, mas suas páginas lidas serão contabilizadas normalmente.
-            </p>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-foreground block mb-1">De quem você pegou emprestado?</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Biblioteca Municipal, Mariana, Clube..."
-                  value={borrowFrom}
-                  onChange={(e) => setBorrowFrom(e.target.value)}
-                  className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                  autoFocus
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs font-semibold text-foreground block mb-1">Quando pegou?</label>
-                  <input
-                    type="date"
-                    value={borrowDate}
-                    onChange={(e) => setBorrowDate(e.target.value)}
-                    className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-2.5 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-foreground block mb-1">Prazo de entrega</label>
-                  <input
-                    type="date"
-                    value={returnDateInput}
-                    onChange={(e) => setReturnDateInput(e.target.value)}
-                    className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-2.5 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                onClick={() => setBorrowModalOpen(false)}
-                className="flex-1 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-secondary text-muted-foreground transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => {
-                  updateBook(book.id, {
-                    status: "emprestado",
-                    borrowedFrom: borrowFrom.trim() || "Não informado",
-                    borrowedDate: borrowDate || new Date().toISOString().slice(0, 10),
-                    returnDate: returnDateInput || undefined,
-                  });
-                  setBorrowModalOpen(false);
-                  toast.success(`Livro registrado como pego emprestado de ${borrowFrom || "alguém"}! 📥`);
-                }}
-                className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-colors"
-              >
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Abandonar / Desistir do Livro */}
-      {abandonModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-card border border-border rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="font-display font-bold text-sm text-foreground flex items-center gap-2">
-                <Undo2 className="w-4 h-4 text-muted-foreground" />
-                Desistir / Abandonar Leitura
-              </h4>
-              <button onClick={() => setAbandonModalOpen(false)} className="text-muted-foreground hover:text-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Tudo bem desistir de uma leitura que não fluiu! As páginas lidas até aqui continuarão salvas no total de páginas lidas, sem contar na meta de livros finalizados.
-            </p>
-            <div>
-              <label className="text-xs font-semibold text-foreground block mb-1">
-                Até qual página você leu? (Total: {book.totalPages || "?"})
-              </label>
-              <input
-                type="number"
-                min="0"
-                max={book.totalPages || 100000}
-                value={abandonPage}
-                onChange={(e) => setAbandonPage(e.target.value)}
-                placeholder={String(book.currentPage || 0)}
-                className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-marsala/40"
-                autoFocus
-              />
-            </div>
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                onClick={() => setAbandonModalOpen(false)}
-                className="flex-1 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-secondary text-muted-foreground transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => {
-                  const page = parseInt(abandonPage);
-                  const finalPage = !isNaN(page) ? page : (book.currentPage || 0);
-                  updateBook(book.id, {
-                    status: "abandonado",
-                    currentPage: Math.max(0, finalPage),
-                  });
-                  setAbandonModalOpen(false);
-                  toast.info(`Livro registrado como abandonado na página ${finalPage}.`);
-                }}
-                className="flex-1 py-2 rounded-xl bg-secondary text-foreground border border-border hover:bg-secondary/80 text-xs font-bold shadow-xs transition-colors"
-              >
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-        </motion.div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-10 bg-secondary/20 rounded-2xl border border-dashed border-border p-6 space-y-2">
-                          <Feather className="w-8 h-8 text-marsala/50 mx-auto" />
-                          <p className="text-xs font-semibold text-foreground">Diário silencioso</p>
-                          <p className="text-[11px] text-muted-foreground max-w-sm mx-auto">
-                            Nenhuma reflexão registrada ainda. Conforme as páginas avançarem, guarde pensamentos e reações de cada capítulo.
-                          </p>
-                        </div>
-                      )}
+                      <button
+                        onClick={handleAddCustomGenre}
+                        className="text-xs px-2.5 py-1 bg-primary text-primary-foreground rounded-lg font-bold hover:bg-primary/90"
+                      >
+                        +
+                      </button>
                     </div>
                   </div>
                 )}
+              </div>
 
-                {/* -------------------------------------------------------- */}
-                {/* 2. REVIEW TAB: EDITORIAL CRITIQUE & SUB-RATINGS         */}
-                {/* -------------------------------------------------------- */}
-                {activeTab === "review" && (
-                  <div className="space-y-6 animate-fade-in">
-                    {/* Main Written Review */}
-                    <div className="rounded-2xl bg-card border border-border p-4 sm:p-5 shadow-xs space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Star className="w-4 h-4 text-gold" />
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                            Resenha Crítica
-                          </h3>
-                        </div>
-                        {book.review && !isEditingReview && (
-                          <button
-                            onClick={() => setIsEditingReview(true)}
-                            className="text-xs text-marsala font-semibold hover:underline"
-                          >
-                            Editar resenha
-                          </button>
-                        )}
-                      </div>
+              {/* Vibes preview tags */}
+              {book.vibes && book.vibes.slice(0, 2).map((vibe) => (
+                <span
+                  key={vibe}
+                  className="text-xs px-2.5 py-0.5 rounded-full bg-secondary text-muted-foreground border border-border"
+                >
+                  {vibe}
+                </span>
+              ))}
+            </div>
 
-                      {isEditingReview ? (
-                        <div className="space-y-3">
-                          <textarea
-                            placeholder="Escreva sua análise detalhada sobre os personagens, desenvolvimento do enredo, tom narrativo e desfecho..."
-                            value={reviewText}
-                            onChange={(e) => setReviewText(e.target.value)}
-                            className="w-full text-xs sm:text-sm px-4 py-3 bg-secondary/30 border border-border rounded-xl text-foreground placeholder:text-muted-foreground min-h-[140px] resize-none focus:outline-none focus:ring-1 focus:ring-marsala leading-relaxed"
-                          />
-                          <div className="flex items-center justify-end gap-2">
-                            {book.review && (
-                              <button
-                                onClick={() => setIsEditingReview(false)}
-                                className="text-xs px-3 py-2 rounded-xl text-muted-foreground hover:text-foreground"
-                              >
-                                Cancelar
-                              </button>
-                            )}
-                            <button
-                              onClick={handleSaveReview}
-                              disabled={!reviewText.trim()}
-                              className="text-xs font-bold px-4 py-2 rounded-xl gradient-marsala text-primary-foreground disabled:opacity-40 shadow-xs hover:opacity-95 transition-opacity"
-                            >
-                              Salvar Resenha
-                            </button>
-                          </div>
-                        </div>
-                      ) : book.review ? (
-                        <div className="p-4 rounded-xl bg-secondary/30 border border-border/60 space-y-2">
-                          <p
-                            translate="no"
-                            className="notranslate text-xs sm:text-sm text-foreground/90 font-serif leading-relaxed whitespace-pre-wrap"
-                          >
-                            {book.review}
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="text-center py-6">
-                          <p className="text-xs text-muted-foreground mb-3">Você ainda não redigiu uma resenha para este livro.</p>
-                          <button
-                            onClick={() => setIsEditingReview(true)}
-                            className="text-xs font-bold px-4 py-2 rounded-xl gradient-marsala text-primary-foreground"
-                          >
-                            Escrever Resenha
-                          </button>
-                        </div>
-                      )}
+            <h1
+              translate="no"
+              className="notranslate text-2xl sm:text-3xl font-serif font-bold text-foreground tracking-tight leading-tight pr-6"
+            >
+              {book.title}
+            </h1>
+            <p
+              translate="no"
+              className="notranslate text-sm text-muted-foreground font-medium font-sans"
+            >
+              por <span className="text-foreground font-semibold">{book.author || "Autor desconhecido"}</span>
+            </p>
+          </div>
+
+          {/* Clean Editorial Navigation Tabs */}
+          <div className="flex border-b border-border bg-card/60 overflow-x-auto scrollbar-hide px-3 sm:px-6">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`whitespace-nowrap flex items-center gap-2 py-3 px-3 sm:px-4 text-xs font-semibold border-b-2 transition-all ${
+                    isActive
+                      ? "border-primary text-primary font-bold bg-primary/5"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+                  <span>{tab.label}</span>
+                  {typeof tab.count === "number" && tab.count > 0 && (
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                      isActive ? "bg-primary/15 text-primary font-bold" : "bg-secondary text-muted-foreground"
+                    }`}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Tab Content Panels */}
+          <div className="p-5 sm:p-7 overflow-y-auto max-h-[58vh] md:max-h-[54vh] space-y-6">
+
+            {/* -------------------------------------------------------- */}
+            {/* 1. JOURNAL TAB: LINED NOTEBOOK STYLING                  */}
+            {/* -------------------------------------------------------- */}
+            {activeTab === "journal" && (
+              <div className="space-y-6 animate-fade-in">
+                
+                {/* Add Note Card with Notebook Feel */}
+                <div className="rounded-2xl bg-card border border-border/90 p-4 sm:p-5 shadow-xs space-y-3 relative overflow-hidden">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Feather className="w-4 h-4 text-primary" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                        Nova Entrada no Diário
+                      </h3>
                     </div>
+                    <span className="text-[11px] text-muted-foreground font-sans">Caderno de Leitura</span>
+                  </div>
 
-                    {/* Specific Sub-Ratings (Personagens, Enredo, etc.) */}
-                    <div className="rounded-2xl bg-card border border-border p-4 sm:p-5 shadow-xs space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-gold" /> Critérios & Avaliações Específicas
-                        </h4>
-                        <button
-                          onClick={() => setShowAddSub(!showAddSub)}
-                          className="text-xs font-semibold text-marsala hover:underline flex items-center gap-1"
+                  <input
+                    placeholder="Capítulo ou página de referência (ex: Cap. 4, Pág. 72)"
+                    value={noteChapter}
+                    onChange={(e) => setNoteChapter(e.target.value)}
+                    className="w-full text-xs px-3 py-2 bg-background border border-input rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+
+                  {/* Textarea with lined journal paper styling */}
+                  <div className="relative rounded-xl border border-border/80 bg-card overflow-hidden">
+                    <textarea
+                      placeholder="Escreva suas impressões, sentimentos e teorias deste capítulo..."
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value)}
+                      className="w-full text-xs sm:text-sm px-4 py-3 bg-transparent text-foreground placeholder:text-muted-foreground/70 min-h-[110px] resize-none focus:outline-none notebook-ruled font-serif leading-7"
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      onClick={handleAddNote}
+                      disabled={!noteText.trim()}
+                      className="flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl bg-primary text-primary-foreground disabled:opacity-40 shadow-xs hover:bg-primary/90 transition-opacity"
+                    >
+                      <Feather className="w-3.5 h-3.5" />
+                      <span>Registrar no Diário</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Journal Entries Timeline */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Passagens & Reflexões ({(book.notes || []).length})
+                    </h4>
+                  </div>
+
+                  {(book.notes || []).length > 0 ? (
+                    <div className="space-y-3">
+                      {(book.notes || []).slice().reverse().map((note, i) => (
+                        <motion.div
+                          key={note.id || i}
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="relative rounded-2xl bg-card border border-border/80 p-4 sm:p-5 shadow-2xs hover:shadow-xs transition-shadow group flex items-start justify-between gap-4 border-l-4 border-l-primary/70"
                         >
-                          <Plus className="w-3.5 h-3.5" /> Nova Categoria
-                        </button>
-                      </div>
-
-                      {showAddSub && (
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 p-3 rounded-xl bg-secondary/50 border border-border">
-                          <input
-                            placeholder="Critério (ex: Ritmo, Personagens, Plot Twist)..."
-                            value={newSubLabel}
-                            onChange={(e) => setNewSubLabel(e.target.value)}
-                            className="text-xs px-3 py-1.5 bg-card border border-border rounded-lg flex-1 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-marsala"
-                            autoFocus
-                          />
-                          <div className="flex items-center gap-1 justify-center">
-                            <RatingStars
-                              value={newSubRating}
-                              onChange={setNewSubRating}
-                              size="sm"
-                              showValue
-                            />
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={handleAddCustomSubRating}
-                              disabled={!newSubLabel.trim()}
-                              className="text-xs px-3 py-1.5 rounded-lg gradient-marsala text-primary-foreground font-semibold disabled:opacity-40"
-                            >
-                              Salvar
-                            </button>
-                            <button
-                              onClick={() => setShowAddSub(false)}
-                              className="p-1.5 text-muted-foreground hover:text-foreground"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                        {(book.subRatings || []).map((sub) => (
-                          <div
-                            key={sub.label}
-                            className="flex items-center justify-between gap-3 bg-secondary/30 px-3.5 py-2.5 rounded-xl border border-border"
-                          >
-                            <span translate="no" className="notranslate text-xs font-medium text-foreground truncate">
-                              {sub.label}
-                            </span>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <RatingStars
-                                value={sub.value}
-                                onChange={(val) => setSubRating(book.id, sub.label, val)}
-                                size="xs"
-                                showValue
-                              />
-                              <button
-                                onClick={() =>
-                                  updateBook(book.id, {
-                                    subRatings: (book.subRatings || []).filter((sr) => sr.label !== sub.label),
-                                  })
-                                }
-                                className="ml-1 min-w-[36px] min-h-[36px] flex items-center justify-center p-1.5 text-muted-foreground hover:text-destructive rounded-lg transition-colors"
-                                title="Remover critério"
-                                aria-label="Remover critério"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[11px] font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full border border-primary/20">
+                                {note.chapter || "Anotação"}
+                              </span>
+                              <span className="text-[11px] text-muted-foreground font-numeric flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {note.date} às {note.time}
+                              </span>
                             </div>
-                          </div>
-                        ))}
-
-                        {(!book.subRatings || book.subRatings.length === 0) && !showAddSub && (
-                          <p className="text-xs text-muted-foreground col-span-2 py-2">
-                            Nenhum critério específico adicionado ainda. Clique em "+ Nova Categoria" para avaliar enredo, personagens e ritmo.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* -------------------------------------------------------- */}
-                {/* 3. QUOTES TAB: LITERARY CLIPPINGS & HIGHLIGHTS           */}
-                {/* -------------------------------------------------------- */}
-                {activeTab === "quotes" && (
-                  <div className="space-y-6 animate-fade-in">
-                    {/* Add Quote Input */}
-                    <div className="rounded-2xl bg-card border border-border p-4 sm:p-5 shadow-xs space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Quote className="w-4 h-4 text-marsala" />
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                          Adicionar Nova Citação Marcante
-                        </h3>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <input
-                          placeholder="Digite ou cole aqui o trecho memorável do livro..."
-                          value={quoteText}
-                          onChange={(e) => setQuoteText(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleAddQuote()}
-                          className="flex-1 text-xs sm:text-sm px-3.5 py-2.5 bg-secondary/40 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-marsala"
-                        />
-                        <button
-                          onClick={handleAddQuote}
-                          disabled={!quoteText.trim()}
-                          className="px-4 py-2.5 rounded-xl gradient-marsala text-primary-foreground text-xs font-bold disabled:opacity-40 flex items-center gap-1.5 shadow-xs hover:opacity-95 transition-opacity"
-                        >
-                          <Plus className="w-4 h-4" />
-                          <span>Guardar</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Quotes List */}
-                    <div className="space-y-3">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                        Citações Salvas ({(book.quotes || []).length})
-                      </h4>
-
-                      {(book.quotes || []).length > 0 ? (
-                        <div className="space-y-3">
-                          {(book.quotes || []).map((q, i) => (
-                            <motion.div
-                              key={i}
-                              initial={{ opacity: 0, y: 6 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              className="relative rounded-2xl bg-card border border-border/80 p-4 sm:p-5 shadow-2xs hover:shadow-xs transition-shadow group flex items-start justify-between gap-4 border-l-4 border-l-gold"
+                            <p
+                              translate="no"
+                              className="notranslate text-xs sm:text-sm text-foreground/90 font-serif leading-relaxed whitespace-pre-wrap pl-1"
                             >
-                              <div className="flex-1 min-w-0">
-                                <p
-                                  translate="no"
-                                  className="notranslate text-xs sm:text-sm text-foreground/90 font-serif italic leading-relaxed"
-                                >
-                                  “{q}”
-                                </p>
-                                <span className="text-[10px] text-muted-foreground mt-2 block font-medium">
-                                  — {book.title}, por {book.author || "Autor"}
-                                </span>
-                              </div>
+                              {note.text}
+                            </p>
+                          </div>
 
-                              <button
-                                onClick={() => {
-                                  const quoteToDelete = q;
-                                  removeQuote(book.id, i);
-                                  toast.success("Citação removida.", {
-                                    action: {
-                                      label: "Desfazer",
-                                      onClick: () => {
-                                        addQuote(book.id, quoteToDelete);
-                                      },
-                                    },
-                                  });
-                                }}
-                                className="opacity-70 group-hover:opacity-100 min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all shrink-0"
-                                title="Remover citação"
-                                aria-label="Remover citação"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                                  {/* Modal Peguei Emprestado */}
-      {borrowModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-card border border-border rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="font-display font-bold text-sm text-foreground flex items-center gap-2">
-                <ArrowUpRight className="w-4 h-4 text-indigo-600" />
-                Peguei Emprestado
-              </h4>
-              <button onClick={() => setBorrowModalOpen(false)} className="text-muted-foreground hover:text-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Registre a procedência de &quot;{book.title}&quot;. Ele não contará no seu acervo físico permanente, mas suas páginas lidas serão contabilizadas normalmente.
-            </p>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-foreground block mb-1">De quem você pegou emprestado?</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Biblioteca Municipal, Mariana, Clube..."
-                  value={borrowFrom}
-                  onChange={(e) => setBorrowFrom(e.target.value)}
-                  className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                  autoFocus
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs font-semibold text-foreground block mb-1">Quando pegou?</label>
-                  <input
-                    type="date"
-                    value={borrowDate}
-                    onChange={(e) => setBorrowDate(e.target.value)}
-                    className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-2.5 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-foreground block mb-1">Prazo de entrega</label>
-                  <input
-                    type="date"
-                    value={returnDateInput}
-                    onChange={(e) => setReturnDateInput(e.target.value)}
-                    className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-2.5 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                onClick={() => setBorrowModalOpen(false)}
-                className="flex-1 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-secondary text-muted-foreground transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => {
-                  updateBook(book.id, {
-                    status: "emprestado",
-                    borrowedFrom: borrowFrom.trim() || "Não informado",
-                    borrowedDate: borrowDate || new Date().toISOString().slice(0, 10),
-                    returnDate: returnDateInput || undefined,
-                  });
-                  setBorrowModalOpen(false);
-                  toast.success(`Livro registrado como pego emprestado de ${borrowFrom || "alguém"}! 📥`);
-                }}
-                className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-colors"
-              >
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Abandonar / Desistir do Livro */}
-      {abandonModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-card border border-border rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="font-display font-bold text-sm text-foreground flex items-center gap-2">
-                <Undo2 className="w-4 h-4 text-muted-foreground" />
-                Desistir / Abandonar Leitura
-              </h4>
-              <button onClick={() => setAbandonModalOpen(false)} className="text-muted-foreground hover:text-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Tudo bem desistir de uma leitura que não fluiu! As páginas lidas até aqui continuarão salvas no total de páginas lidas, sem contar na meta de livros finalizados.
-            </p>
-            <div>
-              <label className="text-xs font-semibold text-foreground block mb-1">
-                Até qual página você leu? (Total: {book.totalPages || "?"})
-              </label>
-              <input
-                type="number"
-                min="0"
-                max={book.totalPages || 100000}
-                value={abandonPage}
-                onChange={(e) => setAbandonPage(e.target.value)}
-                placeholder={String(book.currentPage || 0)}
-                className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-marsala/40"
-                autoFocus
-              />
-            </div>
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                onClick={() => setAbandonModalOpen(false)}
-                className="flex-1 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-secondary text-muted-foreground transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => {
-                  const page = parseInt(abandonPage);
-                  const finalPage = !isNaN(page) ? page : (book.currentPage || 0);
-                  updateBook(book.id, {
-                    status: "abandonado",
-                    currentPage: Math.max(0, finalPage),
-                  });
-                  setAbandonModalOpen(false);
-                  toast.info(`Livro registrado como abandonado na página ${finalPage}.`);
-                }}
-                className="flex-1 py-2 rounded-xl bg-secondary text-foreground border border-border hover:bg-secondary/80 text-xs font-bold shadow-xs transition-colors"
-              >
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-        </motion.div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-10 bg-secondary/20 rounded-2xl border border-dashed border-border p-6 space-y-2">
-                          <Quote className="w-8 h-8 text-gold/50 mx-auto" />
-                          <p className="text-xs font-semibold text-foreground">Nenhuma citação arquivada</p>
-                          <p className="text-[11px] text-muted-foreground max-w-sm mx-auto">
-                            Ao encontrar uma frase sublime que toque sua alma de leitora, registre-a para eternizar o trecho.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* -------------------------------------------------------- */}
-                {/* 4. TECHNICAL DETAILS & VIBES TAB                        */}
-                {/* -------------------------------------------------------- */}
-                {activeTab === "info" && (
-                  <div className="space-y-6 animate-fade-in">
-                    
-                    {/* Metadata Specs Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      {/* Total Pages Edit */}
-                      <div className="bg-card p-4 rounded-2xl border border-border shadow-2xs space-y-2">
-                        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
-                          Extensão da Obra
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min={0}
-                            placeholder="Ex: 412"
-                            value={totalPagesInput}
-                            onChange={(e) => setTotalPagesInput(e.target.value)}
-                            className="w-28 text-xs px-3 py-1.5 bg-secondary/50 border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-marsala"
-                          />
                           <button
-                            onClick={handleUpdateTotalPages}
-                            className="text-xs px-3 py-1.5 rounded-lg gradient-marsala text-primary-foreground font-semibold"
-                          >
-                            Salvar Páginas
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Date Finished */}
-                      <div className="bg-card p-4 rounded-2xl border border-border shadow-2xs space-y-2">
-                        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-marsala" />
-                          Data de Conclusão da Leitura
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="date"
-                            value={book.dateFinished || ""}
-                            onChange={(e) => {
-                              updateBook(book.id, { dateFinished: e.target.value });
-                              toast.success("Data de conclusão registrada!");
+                            onClick={() => {
+                              const noteToDelete = note;
+                              deleteNote(book.id, note.id);
+                              toast.success("Anotação removida do diário.", {
+                                action: {
+                                  label: "Desfazer",
+                                  onClick: () => {
+                                    addNote(book.id, noteToDelete);
+                                  },
+                                },
+                              });
                             }}
-                            className="text-xs px-3 py-1.5 bg-secondary/50 border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-marsala"
-                          />
-                          {book.dateFinished && (
-                            <button
-                              onClick={() => updateBook(book.id, { dateFinished: undefined })}
-                              className="text-[11px] text-muted-foreground hover:text-destructive underline"
-                            >
-                              Limpar
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                            className="opacity-70 group-hover:opacity-100 min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all shrink-0"
+                            title="Excluir anotação"
+                            aria-label="Excluir anotação"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </motion.div>
+                      ))}
                     </div>
+                  ) : (
+                    <div className="text-center py-10 bg-secondary/20 rounded-2xl border border-dashed border-border p-6 space-y-2">
+                      <Feather className="w-8 h-8 text-primary/40 mx-auto" />
+                      <p className="text-xs font-semibold text-foreground">Diário silencioso</p>
+                      <p className="text-[11px] text-muted-foreground max-w-sm mx-auto font-sans">
+                        Nenhuma reflexão registrada ainda. Conforme as páginas avançarem, guarde pensamentos e reações de cada capítulo.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
-                    {/* Vibes & Emotional Tags */}
-                    <div className="rounded-2xl bg-card border border-border p-4 sm:p-5 shadow-xs space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-marsala" /> Boas Vibrações & Emoções
-                        </h4>
+            {/* -------------------------------------------------------- */}
+            {/* 2. REVIEW TAB: EDITORIAL CRITIQUE & SUB-RATINGS         */}
+            {/* -------------------------------------------------------- */}
+            {activeTab === "review" && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Main Written Review */}
+                <div className="rounded-2xl bg-card border border-border p-4 sm:p-5 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Star className="w-4 h-4 text-gold" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                        Resenha Crítica
+                      </h3>
+                    </div>
+                    {book.review && !isEditingReview && (
+                      <button
+                        onClick={() => setIsEditingReview(true)}
+                        className="text-xs text-primary font-semibold hover:underline"
+                      >
+                        Editar resenha
+                      </button>
+                    )}
+                  </div>
+
+                  {isEditingReview ? (
+                    <div className="space-y-3">
+                      <textarea
+                        placeholder="Escreva sua análise detalhada sobre os personagens, desenvolvimento do enredo, tom narrativo e desfecho..."
+                        value={reviewText}
+                        onChange={(e) => setReviewText(e.target.value)}
+                        className="w-full text-xs sm:text-sm px-4 py-3 bg-secondary/30 border border-input rounded-xl text-foreground placeholder:text-muted-foreground min-h-[140px] resize-none focus:outline-none focus:ring-1 focus:ring-primary leading-relaxed font-serif"
+                      />
+                      <div className="flex items-center justify-end gap-2">
+                        {book.review && (
+                          <button
+                            onClick={() => setIsEditingReview(false)}
+                            className="text-xs px-3 py-2 rounded-xl text-muted-foreground hover:text-foreground"
+                          >
+                            Cancelar
+                          </button>
+                        )}
                         <button
-                          onClick={() => setShowAddVibe(!showAddVibe)}
-                          className="text-xs font-semibold text-marsala hover:underline flex items-center gap-1"
+                          onClick={handleSaveReview}
+                          disabled={!reviewText.trim()}
+                          className="text-xs font-bold px-4 py-2 rounded-xl bg-primary text-primary-foreground disabled:opacity-40 shadow-xs hover:bg-primary/90 transition-opacity"
                         >
-                          <Plus className="w-3.5 h-3.5" /> Nova Tag
+                          Salvar Resenha
                         </button>
                       </div>
+                    </div>
+                  ) : book.review ? (
+                    <div className="p-4 rounded-xl bg-secondary/30 border border-border/60 space-y-2">
+                      <p
+                        translate="no"
+                        className="notranslate text-xs sm:text-sm text-foreground/90 font-serif leading-relaxed whitespace-pre-wrap"
+                      >
+                        {book.review}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6">
+                      <p className="text-xs text-muted-foreground mb-3 font-sans">Você ainda não redigiu uma resenha para este livro.</p>
+                      <button
+                        onClick={() => setIsEditingReview(true)}
+                        className="text-xs font-bold px-4 py-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+                      >
+                        Escrever Resenha
+                      </button>
+                    </div>
+                  )}
+                </div>
 
-                      {showAddVibe && (
-                        <div className="flex items-center gap-2 p-2.5 rounded-xl bg-secondary/50 border border-border">
-                          <input
-                            placeholder="Nome da tag (ex: Conforto, Suspense, Lágrimas)..."
-                            value={newVibe}
-                            onChange={(e) => setNewVibe(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleAddCustomVibe()}
-                            className="text-xs px-3 py-1.5 bg-card border border-border rounded-lg flex-1 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-marsala"
-                            autoFocus
+                {/* Specific Sub-Ratings (Personagens, Enredo, etc.) */}
+                <div className="rounded-2xl bg-card border border-border p-4 sm:p-5 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-gold" /> Critérios & Avaliações Específicas
+                    </h4>
+                    <button
+                      onClick={() => setShowAddSub(!showAddSub)}
+                      className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Nova Categoria
+                    </button>
+                  </div>
+
+                  {showAddSub && (
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 p-3 rounded-xl bg-secondary/50 border border-border">
+                      <input
+                        placeholder="Critério (ex: Ritmo, Personagens, Plot Twist)..."
+                        value={newSubLabel}
+                        onChange={(e) => setNewSubLabel(e.target.value)}
+                        className="text-xs px-3 py-1.5 bg-background border border-input rounded-lg flex-1 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        autoFocus
+                      />
+                      <div className="flex items-center gap-1 justify-center">
+                        <RatingStars
+                          value={newSubRating}
+                          onChange={setNewSubRating}
+                          size="sm"
+                          showValue
+                        />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={handleAddCustomSubRating}
+                          disabled={!newSubLabel.trim()}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-semibold disabled:opacity-40 hover:bg-primary/90"
+                        >
+                          Salvar
+                        </button>
+                        <button
+                          onClick={() => setShowAddSub(false)}
+                          className="p-1.5 text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    {(book.subRatings || []).map((sub) => (
+                      <div
+                        key={sub.label}
+                        className="flex items-center justify-between gap-3 bg-secondary/30 px-3.5 py-2.5 rounded-xl border border-border"
+                      >
+                        <span translate="no" className="notranslate text-xs font-medium text-foreground truncate">
+                          {sub.label}
+                        </span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <RatingStars
+                            value={sub.value}
+                            onChange={(val) => setSubRating(book.id, sub.label, val)}
+                            size="xs"
+                            showValue
                           />
                           <button
-                            onClick={handleAddCustomVibe}
-                            disabled={!newVibe.trim()}
-                            className="text-xs px-3 py-1.5 rounded-lg gradient-marsala text-primary-foreground font-semibold disabled:opacity-40"
+                            onClick={() =>
+                              updateBook(book.id, {
+                                subRatings: (book.subRatings || []).filter((sr) => sr.label !== sub.label),
+                              })
+                            }
+                            className="ml-1 min-w-[36px] min-h-[36px] flex items-center justify-center p-1.5 text-muted-foreground hover:text-destructive rounded-lg transition-colors"
+                            title="Remover critério"
+                            aria-label="Remover critério"
                           >
-                            Adicionar
-                          </button>
-                          <button
-                            onClick={() => setShowAddVibe(false)}
-                            className="p-1.5 text-muted-foreground hover:text-foreground"
-                          >
-                            <X className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
-                      )}
-
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {/* Active Vibes */}
-                        {book.vibes.map((vibe) => (
-                          <span
-                            key={vibe}
-                            className="text-xs px-3 py-1 rounded-full gradient-marsala text-primary-foreground flex items-center gap-1.5 shadow-2xs"
-                          >
-                            <span>{vibe}</span>
-                            <button
-                              onClick={() => removeVibe(book.id, vibe)}
-                              className="opacity-80 hover:opacity-100 hover:bg-black/20 rounded-full min-w-[26px] min-h-[26px] flex items-center justify-center -mr-1 p-1 transition-all"
-                              title="Remover tag"
-                              aria-label={`Remover tag ${vibe}`}
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </span>
-                        ))}
-
-                        {/* Suggested Vibes */}
-                        {vibeOptions
-                          .filter((v) => !book.vibes.some((vb) => vb.toLowerCase() === v.toLowerCase()))
-                          .map((vibe) => (
-                            <button
-                              key={vibe}
-                              onClick={() => addVibe(book.id, vibe)}
-                              className="text-xs px-3 py-1 rounded-full border border-border bg-secondary/50 text-muted-foreground hover:border-marsala/40 hover:text-foreground transition-all"
-                            >
-                              + {vibe}
-                            </button>
-                          ))}
                       </div>
-                    </div>
+                    ))}
 
-                    {/* Smart Recommendations: Similar Books */}
-                    <div className="pt-2 border-t border-border space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-gold" />
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                          Obras Recomendadas Para Esta Leitora
-                        </h4>
-                      </div>
-
-                      {recsLoading && (
-                        <p className="text-xs text-muted-foreground py-4 text-center">Buscando sugestões literárias afins...</p>
-                      )}
-
-                      {!recsLoading && recs.length === 0 && (
-                        <p className="text-xs text-muted-foreground py-2">Nenhuma sugestão encontrada para este título no momento.</p>
-                      )}
-
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {recs.map((r) => (
-                          <div
-                            key={r.id}
-                            className="bg-card border border-border rounded-2xl p-2.5 flex flex-col justify-between shadow-2xs hover:shadow-card transition-all group"
-                          >
-                            <img
-                              src={r.cover}
-                              alt={r.title}
-                              className="w-full h-28 object-cover rounded-xl mb-2 shadow-xs"
-                              loading="lazy"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-foreground line-clamp-2 leading-tight">
-                                {r.title}
-                              </p>
-                              <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-                                {r.author}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => handleAddRecToWishlist(r)}
-                              className="w-full mt-2 text-[10px] font-bold py-1.5 rounded-xl bg-secondary text-foreground hover:bg-marsala hover:text-primary-foreground transition-colors flex items-center justify-center gap-1"
-                            >
-                              <PlusCircle className="w-3 h-3" />
-                              <span>Quero Ler</span>
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
+                    {(!book.subRatings || book.subRatings.length === 0) && !showAddSub && (
+                      <p className="text-xs text-muted-foreground col-span-2 py-2 font-sans">
+                        Nenhum critério específico adicionado ainda. Clique em "+ Nova Categoria" para avaliar enredo, personagens e ritmo.
+                      </p>
+                    )}
                   </div>
-                )}
+                </div>
+              </div>
+            )}
+
+            {/* -------------------------------------------------------- */}
+            {/* 3. QUOTES TAB: LITERARY CLIPPINGS & HIGHLIGHTS           */}
+            {/* -------------------------------------------------------- */}
+            {activeTab === "quotes" && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Add Quote Input */}
+                <div className="rounded-2xl bg-card border border-border p-4 sm:p-5 shadow-xs space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Quote className="w-4 h-4 text-primary" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      Adicionar Nova Citação Marcante
+                    </h3>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <input
+                      placeholder="Digite ou cole aqui o trecho memorável do livro..."
+                      value={quoteText}
+                      onChange={(e) => setQuoteText(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddQuote()}
+                      className="flex-1 text-xs sm:text-sm px-3.5 py-2.5 bg-background border border-input rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <button
+                      onClick={handleAddQuote}
+                      disabled={!quoteText.trim()}
+                      className="px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold disabled:opacity-40 flex items-center gap-1.5 shadow-xs hover:bg-primary/90 transition-opacity"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Guardar</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quotes List */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Citações Salvas ({(book.quotes || []).length})
+                  </h4>
+
+                  {(book.quotes || []).length > 0 ? (
+                    <div className="space-y-3">
+                      {(book.quotes || []).map((q, i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="relative rounded-2xl bg-card border border-border/80 p-4 sm:p-5 shadow-2xs hover:shadow-xs transition-shadow group flex items-start justify-between gap-4 border-l-4 border-l-gold"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p
+                              translate="no"
+                              className="notranslate text-xs sm:text-sm text-foreground/90 font-serif italic leading-relaxed"
+                            >
+                              “{q}”
+                            </p>
+                            <span className="text-[10px] text-muted-foreground mt-2 block font-medium font-sans">
+                              — {book.title}, por {book.author || "Autor"}
+                            </span>
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              const quoteToDelete = q;
+                              removeQuote(book.id, i);
+                              toast.success("Citação removida.", {
+                                action: {
+                                  label: "Desfazer",
+                                  onClick: () => {
+                                    addQuote(book.id, quoteToDelete);
+                                  },
+                                },
+                              });
+                            }}
+                            className="opacity-70 group-hover:opacity-100 min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all shrink-0"
+                            title="Remover citação"
+                            aria-label="Remover citação"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-10 bg-secondary/20 rounded-2xl border border-dashed border-border p-6 space-y-2">
+                      <Quote className="w-8 h-8 text-gold/50 mx-auto" />
+                      <p className="text-xs font-semibold text-foreground">Nenhuma citação arquivada</p>
+                      <p className="text-[11px] text-muted-foreground max-w-sm mx-auto font-sans">
+                        Ao encontrar uma frase sublime que toque sua alma de leitora, registre-a para eternizar o trecho.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* -------------------------------------------------------- */}
+            {/* 4. TECHNICAL DETAILS & VIBES TAB                        */}
+            {/* -------------------------------------------------------- */}
+            {activeTab === "info" && (
+              <div className="space-y-6 animate-fade-in">
+                
+                {/* Metadata Specs Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {/* Total Pages Edit */}
+                  <div className="bg-card p-4 rounded-2xl border border-border shadow-2xs space-y-2">
+                    <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
+                      Extensão da Obra
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        placeholder="Ex: 412"
+                        value={totalPagesInput}
+                        onChange={(e) => setTotalPagesInput(e.target.value)}
+                        className="w-28 text-xs px-3 py-1.5 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                      <button
+                        onClick={handleUpdateTotalPages}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90"
+                      >
+                        Salvar Páginas
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Date Finished */}
+                  <div className="bg-card p-4 rounded-2xl border border-border shadow-2xs space-y-2">
+                    <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-primary" />
+                      Data de Conclusão da Leitura
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="date"
+                        value={book.dateFinished || ""}
+                        onChange={(e) => {
+                          updateBook(book.id, { dateFinished: e.target.value });
+                          toast.success("Data de conclusão registrada!");
+                        }}
+                        className="text-xs px-3 py-1.5 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                      {book.dateFinished && (
+                        <button
+                          onClick={() => updateBook(book.id, { dateFinished: undefined })}
+                          className="text-[11px] text-muted-foreground hover:text-destructive underline"
+                        >
+                          Limpar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vibes & Emotional Tags */}
+                <div className="rounded-2xl bg-card border border-border p-4 sm:p-5 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-primary" /> Boas Vibrações & Emoções
+                    </h4>
+                    <button
+                      onClick={() => setShowAddVibe(!showAddVibe)}
+                      className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Nova Tag
+                    </button>
+                  </div>
+
+                  {showAddVibe && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-secondary/50 border border-border">
+                      <input
+                        placeholder="Nome da tag (ex: Conforto, Suspense, Lágrimas)..."
+                        value={newVibe}
+                        onChange={(e) => setNewVibe(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleAddCustomVibe()}
+                        className="text-xs px-3 py-1.5 bg-background border border-input rounded-lg flex-1 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        autoFocus
+                      />
+                      <button
+                        onClick={handleAddCustomVibe}
+                        disabled={!newVibe.trim()}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-semibold disabled:opacity-40 hover:bg-primary/90"
+                      >
+                        Adicionar
+                      </button>
+                      <button
+                        onClick={() => setShowAddVibe(false)}
+                        className="p-1.5 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {/* Active Vibes */}
+                    {book.vibes.map((vibe) => (
+                      <span
+                        key={vibe}
+                        className="text-xs px-3 py-1 rounded-full bg-primary text-primary-foreground flex items-center gap-1.5 shadow-2xs"
+                      >
+                        <span>{vibe}</span>
+                        <button
+                          onClick={() => removeVibe(book.id, vibe)}
+                          className="opacity-80 hover:opacity-100 hover:bg-black/20 rounded-full min-w-[26px] min-h-[26px] flex items-center justify-center -mr-1 p-1 transition-all"
+                          title="Remover tag"
+                          aria-label={`Remover tag ${vibe}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+
+                    {/* Suggested Vibes */}
+                    {vibeOptions
+                      .filter((v) => !book.vibes.some((vb) => vb.toLowerCase() === v.toLowerCase()))
+                      .map((vibe) => (
+                        <button
+                          key={vibe}
+                          onClick={() => addVibe(book.id, vibe)}
+                          className="text-xs px-3 py-1 rounded-full border border-border bg-secondary/50 text-muted-foreground hover:border-primary/40 hover:text-foreground transition-all"
+                        >
+                          + {vibe}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Smart Recommendations: Similar Books */}
+                <div className="pt-2 border-t border-border space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-gold" />
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      Obras Recomendadas Para Esta Leitora
+                    </h4>
+                  </div>
+
+                  {recsLoading && (
+                    <p className="text-xs text-muted-foreground py-4 text-center">Buscando sugestões literárias afins...</p>
+                  )}
+
+                  {!recsLoading && recs.length === 0 && (
+                    <p className="text-xs text-muted-foreground py-2 font-sans">Nenhuma sugestão encontrada para este título no momento.</p>
+                  )}
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {recs.map((r) => (
+                      <div
+                        key={r.id}
+                        className="bg-card border border-border rounded-2xl p-2.5 flex flex-col justify-between shadow-2xs hover:shadow-card transition-all group"
+                      >
+                        <img
+                          src={r.cover}
+                          alt={r.title}
+                          className="w-full h-28 object-cover rounded-xl mb-2 shadow-xs"
+                          loading="lazy"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-foreground line-clamp-2 leading-tight">
+                            {r.title}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+                            {r.author}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleAddRecToWishlist(r)}
+                          className="w-full mt-2 text-[10px] font-bold py-1.5 rounded-xl bg-secondary text-foreground hover:bg-primary hover:text-primary-foreground transition-colors flex items-center justify-center gap-1"
+                        >
+                          <PlusCircle className="w-3 h-3" />
+                          <span>Quero Ler</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
               </div>
-            </div>
+            )}
 
           </div>
-              {/* Modal Peguei Emprestado */}
+        </div>
+
+      </div>
+
+      {/* Sub-Modal: Peguei Emprestado */}
       {borrowModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-card border border-border rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in"
+          onClick={() => setBorrowModalOpen(false)}
+        >
+          <div 
+            className="bg-card border border-border rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between">
-              <h4 className="font-display font-bold text-sm text-foreground flex items-center gap-2">
-                <ArrowUpRight className="w-4 h-4 text-indigo-600" />
+              <h4 className="font-serif font-bold text-sm text-foreground flex items-center gap-2">
+                <ArrowUpRight className="w-4 h-4 text-sky-600 dark:text-sky-400" />
                 Peguei Emprestado
               </h4>
-              <button onClick={() => setBorrowModalOpen(false)} className="text-muted-foreground hover:text-foreground">
+              <button 
+                onClick={() => setBorrowModalOpen(false)} 
+                className="text-muted-foreground hover:text-foreground p-1 rounded-lg"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
+            <p className="text-xs text-muted-foreground leading-relaxed font-sans">
               Registre a procedência de &quot;{book.title}&quot;. Ele não contará no seu acervo físico permanente, mas suas páginas lidas serão contabilizadas normalmente.
             </p>
             <div className="space-y-3">
@@ -1638,7 +1365,7 @@ export const BookDetailModal = () => {
                   placeholder="Ex: Biblioteca Municipal, Mariana, Clube..."
                   value={borrowFrom}
                   onChange={(e) => setBorrowFrom(e.target.value)}
-                  className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                  className="w-full text-xs bg-background border border-input rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   autoFocus
                 />
               </div>
@@ -1649,7 +1376,7 @@ export const BookDetailModal = () => {
                     type="date"
                     value={borrowDate}
                     onChange={(e) => setBorrowDate(e.target.value)}
-                    className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-2.5 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                    className="w-full text-xs bg-background border border-input rounded-xl px-2.5 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
                 <div>
@@ -1658,7 +1385,7 @@ export const BookDetailModal = () => {
                     type="date"
                     value={returnDateInput}
                     onChange={(e) => setReturnDateInput(e.target.value)}
-                    className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-2.5 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                    className="w-full text-xs bg-background border border-input rounded-xl px-2.5 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
               </div>
@@ -1681,7 +1408,7 @@ export const BookDetailModal = () => {
                   setBorrowModalOpen(false);
                   toast.success(`Livro registrado como pego emprestado de ${borrowFrom || "alguém"}! 📥`);
                 }}
-                className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-colors"
+                className="flex-1 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold shadow-xs transition-colors"
               >
                 Confirmar
               </button>
@@ -1690,20 +1417,29 @@ export const BookDetailModal = () => {
         </div>
       )}
 
-      {/* Modal Abandonar / Desistir do Livro */}
+      {/* Sub-Modal: Abandonar / Desistir do Livro */}
       {abandonModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-card border border-border rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in"
+          onClick={() => setAbandonModalOpen(false)}
+        >
+          <div 
+            className="bg-card border border-border rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between">
-              <h4 className="font-display font-bold text-sm text-foreground flex items-center gap-2">
+              <h4 className="font-serif font-bold text-sm text-foreground flex items-center gap-2">
                 <Undo2 className="w-4 h-4 text-muted-foreground" />
                 Desistir / Abandonar Leitura
               </h4>
-              <button onClick={() => setAbandonModalOpen(false)} className="text-muted-foreground hover:text-foreground">
+              <button 
+                onClick={() => setAbandonModalOpen(false)} 
+                className="text-muted-foreground hover:text-foreground p-1 rounded-lg"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
+            <p className="text-xs text-muted-foreground leading-relaxed font-sans">
               Tudo bem desistir de uma leitura que não fluiu! As páginas lidas até aqui continuarão salvas no total de páginas lidas, sem contar na meta de livros finalizados.
             </p>
             <div>
@@ -1717,7 +1453,7 @@ export const BookDetailModal = () => {
                 value={abandonPage}
                 onChange={(e) => setAbandonPage(e.target.value)}
                 placeholder={String(book.currentPage || 0)}
-                className="w-full text-xs bg-secondary/50 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-marsala/40"
+                className="w-full text-xs bg-background border border-input rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 autoFocus
               />
             </div>
@@ -1747,10 +1483,35 @@ export const BookDetailModal = () => {
           </div>
         </div>
       )}
+    </div>
+  );
 
-        </motion.div>
-      </div>
-    </AnimatePresence>
+  if (isMobile) {
+    return (
+      <Drawer open={!!book} onOpenChange={(v) => !v && setSelectedBook(null)}>
+        <DrawerContent className="max-h-[92vh] flex flex-col bg-card border-border">
+          <DrawerHeader className="sr-only">
+            <DrawerTitle>{book.title}</DrawerTitle>
+          </DrawerHeader>
+          <div className="flex-1 overflow-y-auto">
+            {renderModalBody()}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={!!book} onOpenChange={(v) => !v && setSelectedBook(null)}>
+      <DialogContent className="max-w-5xl max-h-[88vh] overflow-hidden flex flex-col bg-card border-border p-0 shadow-2xl">
+        <DialogHeader className="sr-only">
+          <DialogTitle>{book.title}</DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 overflow-y-auto">
+          {renderModalBody()}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
