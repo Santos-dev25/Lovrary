@@ -93,39 +93,42 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <LovraryLogo size={56} className="mb-3" />
-          <h1 className="font-display text-3xl font-bold text-marsala tracking-tight">Lovrary</h1>
+      <div className="w-full max-w-md animate-fade-in">
+        {/* Editorial Logo Header */}
+        <div className="flex flex-col items-center mb-8 text-center space-y-2">
+          <LovraryLogo size={56} className="mb-1" />
+          <h1 className="font-serif text-3xl sm:text-4xl font-bold text-primary tracking-tight">Lovrary</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground font-sans">
+            Sua biblioteca pessoal e diário de leituras.
+          </p>
         </div>
 
-        <div className="bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-card">
+        <div className="bg-card border border-border rounded-3xl p-6 sm:p-8 shadow-card space-y-6">
           {/* Guest demo shortcut button */}
           <button
             type="button"
             onClick={handleGuestEntry}
-            className="w-full mb-6 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-marsala/30 bg-marsala/5 hover:bg-marsala/10 text-marsala text-sm font-semibold transition-all shadow-sm group"
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-gold/40 bg-gold/10 hover:bg-gold/20 text-foreground dark:text-gold text-sm font-semibold transition-all shadow-2xs group"
           >
-            <Sparkles className="w-4 h-4 text-gold group-hover:rotate-12 transition-transform" />
+            <Sparkles className="w-4 h-4 text-gold group-hover:rotate-12 transition-transform duration-200" />
             <span>Acessar no Modo Demonstração</span>
           </button>
 
-          <div className="relative flex items-center justify-center mb-6">
+          <div className="relative flex items-center justify-center">
             <div className="border-t border-border w-full" />
-            <span className="bg-card px-3 text-xs text-muted-foreground uppercase tracking-wider shrink-0">
+            <span className="bg-card px-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider shrink-0 font-sans">
               ou com sua conta
             </span>
             <div className="border-t border-border w-full" />
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-1 bg-secondary rounded-xl p-1 mb-6">
+          {/* Segmented Control Tabs */}
+          <div className="flex gap-1 bg-secondary rounded-xl p-1">
             <button
               onClick={() => setMode("login")}
-              className={`flex-1 text-sm font-medium py-2 rounded-lg transition-all ${
+              className={`flex-1 text-xs sm:text-sm font-semibold py-2 rounded-lg transition-all ${
                 mode === "login"
-                  ? "gradient-marsala text-primary-foreground shadow-sm"
+                  ? "bg-primary text-primary-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -133,9 +136,9 @@ const Auth = () => {
             </button>
             <button
               onClick={() => setMode("signup")}
-              className={`flex-1 text-sm font-medium py-2 rounded-lg transition-all ${
+              className={`flex-1 text-xs sm:text-sm font-semibold py-2 rounded-lg transition-all ${
                 mode === "signup"
-                  ? "gradient-marsala text-primary-foreground shadow-sm"
+                  ? "bg-primary text-primary-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -146,76 +149,76 @@ const Auth = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "signup" && (
               <div>
-                <label className="text-xs font-medium text-foreground mb-1.5 block">Nome</label>
+                <label className="text-xs font-semibold text-foreground mb-1.5 block font-sans">Nome</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                   <input
                     type="text"
                     placeholder="Como devemos te chamar?"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-marsala/30"
+                    className="w-full pl-10 pr-4 py-2.5 bg-background border border-input rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
               </div>
             )}
             <div>
-              <label className="text-xs font-medium text-foreground mb-1.5 block">Email</label>
+              <label className="text-xs font-semibold text-foreground mb-1.5 block font-sans">Email</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                 <input
                   type="email"
                   placeholder="seu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-marsala/30"
+                  className="w-full pl-10 pr-4 py-2.5 bg-background border border-input rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   autoComplete="email"
                   required
                 />
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-foreground mb-1.5 block">Senha</label>
+              <label className="text-xs font-semibold text-foreground mb-1.5 block font-sans">Senha</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                 <input
                   type="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-marsala/30"
+                  className="w-full pl-10 pr-4 py-2.5 bg-background border border-input rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   autoComplete={mode === "login" ? "current-password" : "new-password"}
                   required
                   minLength={6}
                 />
               </div>
               {mode === "signup" && (
-                <p className="text-[11px] text-muted-foreground mt-1.5">Mínimo de 6 caracteres</p>
+                <p className="text-[11px] text-muted-foreground mt-1 font-sans">Mínimo de 6 caracteres</p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 gradient-marsala text-primary-foreground py-2.5 rounded-xl text-sm font-semibold hover:opacity-95 transition-opacity disabled:opacity-50 shadow-sm"
+              className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-opacity disabled:opacity-50 shadow-xs"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
                   <BookOpen className="w-4 h-4" />
-                  {mode === "login" ? "Entrar na minha biblioteca" : "Criar minha biblioteca"}
+                  <span>{mode === "login" ? "Entrar na minha biblioteca" : "Criar minha biblioteca"}</span>
                 </>
               )}
             </button>
           </form>
         </div>
 
-        <p className="text-center text-xs text-muted-foreground mt-6">
+        <p className="text-center text-xs text-muted-foreground mt-6 font-sans">
           {mode === "login" ? "Novo por aqui? " : "Já tem uma conta? "}
           <button
             onClick={() => setMode(mode === "login" ? "signup" : "login")}
-            className="text-marsala font-semibold hover:underline"
+            className="text-primary font-semibold hover:underline"
           >
             {mode === "login" ? "Criar conta" : "Fazer login"}
           </button>

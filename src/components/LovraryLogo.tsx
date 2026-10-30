@@ -81,7 +81,7 @@ export const LovraryLogo: React.FC<LovraryLogoProps> = ({
 
       {showText && (
         <span
-          className={`font-display text-xl font-bold tracking-tight text-marsala ${textClassName}`}
+          className={`font-serif text-xl font-bold tracking-tight text-primary ${textClassName}`}
         >
           lovrary
         </span>

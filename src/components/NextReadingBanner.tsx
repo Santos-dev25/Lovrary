@@ -20,7 +20,7 @@ const NextReadingBanner = ({ onStartReading }: Props) => {
     <motion.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="gradient-marsala rounded-xl p-4 flex items-center gap-4 text-primary-foreground"
+      className="bg-primary rounded-2xl p-4 flex items-center gap-4 text-primary-foreground shadow-xs"
     >
       <div className="p-2 rounded-lg bg-primary-foreground/15">
         <Sparkles className="w-5 h-5" />

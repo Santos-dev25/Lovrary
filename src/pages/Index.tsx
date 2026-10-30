@@ -8,6 +8,7 @@ import BookCard from "@/components/BookCard";
 import CategoryFilter from "@/components/CategoryFilter";
 import RecentActivity from "@/components/RecentActivity";
 import BookDetailModal from "@/components/BookDetailModal";
+import AddBookModal from "@/components/AddBookModal";
 import JournalPage from "@/components/JournalPage";
 import ReadingQueuePage from "@/components/ReadingQueuePage";
 import ResenhasPage from "@/components/ResenhasPage";
@@ -15,7 +16,7 @@ import MetasPage from "@/components/MetasPage";
 import StatsPage from "@/components/StatsPage";
 import ExportPage from "@/components/ExportPage";
 import { useBooks } from "@/context/BooksContext";
-import { Search, Menu, Users, LayoutGrid, ArrowUpDown, RotateCcw, X } from "lucide-react";
+import { Search, Menu, Users, LayoutGrid, ArrowUpDown, RotateCcw, X, Sparkles, Plus } from "lucide-react";
 import LovraryLogo from "@/components/LovraryLogo";
 
 import { categories } from "@/data/mockBooks";
@@ -27,6 +28,7 @@ const Index = () => {
   const [search, setSearch] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
   const [groupByAuthor, setGroupByAuthor] = useState(false);
   const [sortBy, setSortBy] = useState<"recent" | "rating-desc" | "date-finished" | "pages-desc" | "pages-asc" | "title-asc" | "author-asc">("recent");
   const [statusFilter, setStatusFilter] = useState<"todos" | "nao-lido" | "lendo" | "lido" | "emprestado" | "abandonado">("todos");
@@ -178,7 +180,7 @@ const Index = () => {
           <span className="text-xs sm:text-sm text-muted-foreground shrink-0">{filteredBooks.length} livro(s)</span>
         </div>
 
-        {activeTab === "acervo" && (
+        {(activeTab === "acervo" || activeTab === "wishlist") && (
           <div className="space-y-3.5">
             {/* Search Input with Shortcut & Clear Button */}
             <div className="relative">
@@ -186,7 +188,7 @@ const Index = () => {
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Buscar por título ou autor no seu acervo..."
+                placeholder={activeTab === "wishlist" ? "Buscar por título ou autor na lista de desejos..." : "Buscar por título ou autor no seu acervo..."}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-10 pr-20 py-2.5 bg-card border border-input rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors shadow-2xs"
@@ -335,9 +337,27 @@ const Index = () => {
         )}
 
         {filteredBooks.length === 0 && (
-          <div className="text-center py-16 bg-card/50 rounded-2xl border border-dashed border-border p-8">
-            <p className="text-foreground font-display font-medium text-base">Nenhum livro encontrado</p>
-            <p className="text-muted-foreground text-xs mt-1">Tente ajustar os termos de busca ou selecione outra categoria.</p>
+          <div className="text-center py-16 bg-card/50 rounded-2xl border border-dashed border-border p-8 space-y-3">
+            {activeTab === "wishlist" ? (
+              <>
+                <Sparkles className="w-10 h-10 text-gold mx-auto mb-1 opacity-80" />
+                <p className="text-foreground font-serif font-bold text-base sm:text-lg">Sua Lista de Desejos está vazia</p>
+                <p className="text-muted-foreground text-xs sm:text-sm max-w-sm mx-auto font-sans leading-relaxed">
+                  Encontrou um livro interessante que pretende ler no futuro? Busque e adicione à sua lista de desejos para não esquecer.
+                </p>
+                <button
+                  onClick={() => setAddModalOpen(true)}
+                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-opacity shadow-xs"
+                >
+                  <Plus className="w-4 h-4" /> Buscar Novos Livros
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-foreground font-serif font-medium text-base">Nenhum livro encontrado</p>
+                <p className="text-muted-foreground text-xs mt-1">Tente ajustar os termos de busca ou selecione outra categoria.</p>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -368,7 +388,7 @@ const Index = () => {
         </button>
         <div className="flex items-center gap-2">
           <LovraryLogo size={26} />
-          <span className="font-serif text-lg font-bold text-marsala tracking-tight">Lovrary</span>
+          <span className="font-serif text-lg font-bold text-primary tracking-tight">Lovrary</span>
         </div>
         <div className="w-11 flex justify-end" aria-hidden="true" />
       </header>
@@ -383,6 +403,7 @@ const Index = () => {
         </div>
       </main>
       {selectedBook && <BookDetailModal />}
+      <AddBookModal open={addModalOpen} onClose={() => setAddModalOpen(false)} />
     </div>
   );
 };

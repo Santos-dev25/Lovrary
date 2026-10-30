@@ -18,9 +18,9 @@ const WelcomeBanner = () => {
           Bem-vindo de volta! 📖
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Você já concluiu <span className="font-semibold text-marsala font-numeric">{booksReadThisYear}</span> {booksReadThisYear === 1 ? "livro" : "livros"} este ano
+          Você já concluiu <span className="font-semibold text-primary font-numeric">{booksReadThisYear}</span> {booksReadThisYear === 1 ? "livro" : "livros"} este ano
           {booksReading > 0 ? (
-            <> e está com <span className="font-semibold text-marsala font-numeric">{booksReading}</span> em andamento.</>
+            <> e está com <span className="font-semibold text-primary font-numeric">{booksReading}</span> em andamento.</>
           ) : (
             <>. Que tal escolher uma nova leitura?</>
           )}

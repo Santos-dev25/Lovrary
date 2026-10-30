@@ -1,5 +1,5 @@
 import { useBooks } from "@/context/BooksContext";
-import { Quote, BookOpen } from "lucide-react";
+import { Quote, BookOpen, Feather } from "lucide-react";
 import { motion } from "framer-motion";
 import RatingStars from "@/components/RatingStars";
 
@@ -8,16 +8,26 @@ const ResenhasPage = () => {
   const reviewedBooks = books.filter(b => b.review || (b.notes && b.notes.length > 0));
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-display font-bold text-foreground">Minhas Resenhas</h2>
-        <span className="text-sm text-muted-foreground">{reviewedBooks.length} resenha(s)</span>
+    <div className="space-y-6 sm:space-y-8 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-serif font-bold text-foreground tracking-tight">Minhas Resenhas</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 font-sans">
+            Sua antologia crítica com impressões, ensaios breves e notas de leitura.
+          </p>
+        </div>
+        <span className="text-xs sm:text-sm text-muted-foreground font-numeric self-start sm:self-auto">
+          {reviewedBooks.length} resenha(s) registrada(s)
+        </span>
       </div>
 
       {reviewedBooks.length === 0 ? (
-        <div className="text-center py-16">
-          <BookOpen className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">Nenhuma resenha ainda. Finalize um livro para começar!</p>
+        <div className="text-center py-16 sm:py-20 bg-card/40 rounded-2xl border border-dashed border-border p-8 space-y-3">
+          <BookOpen className="w-12 h-12 text-muted-foreground mx-auto opacity-50" />
+          <h3 className="font-serif font-bold text-foreground text-lg">Nenhuma resenha registrada ainda</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto font-sans leading-relaxed">
+            Ao concluir uma leitura ou redigir suas impressões na ficha de um livro, suas resenhas críticas aparecerão reunidas aqui.
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -26,32 +36,85 @@ const ResenhasPage = () => {
               key={book.id}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.08 }}
-              className="bg-card rounded-xl border border-border p-5 shadow-card cursor-pointer hover:shadow-card-hover transition-shadow"
+              transition={{ delay: i * 0.06 }}
+              tabIndex={0}
+              role="button"
+              aria-label={`Ver resenha completa de ${book.title}`}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setSelectedBook(book);
+                }
+              }}
               onClick={() => setSelectedBook(book)}
+              className="bg-card rounded-2xl border border-border p-5 sm:p-6 shadow-card hover:shadow-card-hover transition-all cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <div className="flex gap-4">
-                <img src={book.cover} alt={book.title} className="w-16 h-24 object-cover rounded-lg shadow-sm" />
-                <div className="flex-1 min-w-0">
-                  <h3 translate="no" className="notranslate font-display font-semibold text-foreground">{book.title}</h3>
-                  <p translate="no" className="notranslate text-xs text-muted-foreground">{book.author}</p>
-                  {book.rating > 0 && (
-                    <div className="mt-1">
-                      <RatingStars value={book.rating} size="sm" showValue readOnly />
+              <div className="flex gap-4 sm:gap-5">
+                {/* 2:3 Cover thumbnail */}
+                <div className="w-16 sm:w-20 aspect-[2/3] rounded-xl overflow-hidden shrink-0 shadow-xs border border-border/40 bg-secondary/30">
+                  <img
+                    src={book.cover}
+                    alt={book.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                </div>
+
+                <div className="flex-1 min-w-0 flex flex-col justify-between">
+                  <div>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2">
+                      <h3
+                        translate="no"
+                        className="notranslate font-serif font-bold text-base sm:text-lg text-foreground truncate group-hover:text-primary transition-colors"
+                      >
+                        {book.title}
+                      </h3>
+                      {book.rating > 0 && (
+                        <div className="shrink-0">
+                          <RatingStars value={book.rating} size="sm" showValue readOnly />
+                        </div>
+                      )}
                     </div>
-                  )}
 
-                  {book.review && (
-                    <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{book.review}</p>
-                  )}
+                    <p
+                      translate="no"
+                      className="notranslate text-xs text-muted-foreground font-sans mt-0.5"
+                    >
+                      por <span className="text-foreground font-medium">{book.author || "Autor desconhecido"}</span>
+                      {book.category ? ` • ${book.category}` : ""}
+                    </p>
 
-                  <div className="flex items-center gap-4 mt-2">
+                    {book.review ? (
+                      <p
+                        translate="no"
+                        className="notranslate text-xs sm:text-sm text-foreground/90 font-serif leading-relaxed line-clamp-3 mt-2.5 pl-0.5"
+                      >
+                        {book.review}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground/70 italic mt-2 font-serif">
+                        Anotações registradas no diário de bordo (sem texto corrido de resenha).
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Footer metadata badges */}
+                  <div className="flex items-center gap-3.5 mt-3 pt-2.5 border-t border-border/60 text-[11px] text-muted-foreground font-sans">
                     {book.notes && book.notes.length > 0 && (
-                      <span className="text-[10px] text-muted-foreground">{book.notes.length} anotação(ões)</span>
+                      <span className="flex items-center gap-1">
+                        <Feather className="w-3.5 h-3.5 text-primary" />
+                        <span className="font-numeric">{book.notes.length}</span> anotação(ões) no Journal
+                      </span>
                     )}
                     {book.quotes && book.quotes.length > 0 && (
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                        <Quote className="w-3 h-3" /> {book.quotes.length} citação(ões)
+                      <span className="flex items-center gap-1">
+                        <Quote className="w-3.5 h-3.5 text-gold" />
+                        <span className="font-numeric">{book.quotes.length}</span> citação(ões) salvas
+                      </span>
+                    )}
+                    {book.dateFinished && (
+                      <span className="ml-auto text-muted-foreground/80 font-numeric">
+                        Concluído em {book.dateFinished}
                       </span>
                     )}
                   </div>

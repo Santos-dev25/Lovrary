@@ -14,7 +14,7 @@ const RecentActivity = () => {
         icon: CheckCircle,
         text: `Você finalizou "${book.title}"`,
         time: book.dateFinished,
-        color: "text-marsala",
+        color: "text-primary",
       });
     }
     if (book.notes && book.notes.length > 0) {
@@ -39,7 +39,7 @@ const RecentActivity = () => {
         icon: BookOpen,
         text: `Lendo "${book.title}" — ${book.progress || 0}%`,
         time: "Em andamento",
-        color: "text-marsala",
+        color: "text-primary",
       });
     }
   });

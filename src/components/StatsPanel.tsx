@@ -115,7 +115,7 @@ const StatsPanel = () => {
         </div>
         <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-card border border-border/60 shadow-2xs">
           <span className="text-xs text-muted-foreground font-medium">Lendo</span>
-          <span className="font-numeric text-xs font-bold text-marsala">{tabCounts.lendo}</span>
+          <span className="font-numeric text-xs font-bold text-primary">{tabCounts.lendo}</span>
         </div>
         <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-card border border-border/60 shadow-2xs">
           <span className="text-xs text-muted-foreground font-medium">Lidos</span>
@@ -137,10 +137,10 @@ const StatsPanel = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.06 }}
-              className="bg-card rounded-2xl border border-border p-4 sm:p-5 shadow-card hover:border-marsala/30 transition-colors"
+              className="bg-card rounded-2xl border border-border p-4 sm:p-5 shadow-card hover:border-primary/40 transition-colors"
             >
               <div className="flex items-center gap-2.5 mb-2.5">
-                <div className="p-2 rounded-xl bg-secondary text-marsala">
+                <div className="p-2 rounded-xl bg-primary/10 text-primary">
                   <Icon className="w-4 h-4" />
                 </div>
                 <span className="text-xs font-medium text-muted-foreground">{stat.label}</span>
@@ -221,7 +221,7 @@ const StatsPanel = () => {
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2.5">
-                <div className="p-2.5 rounded-xl bg-marsala/15 text-marsala shadow-2xs">
+                <div className="p-2.5 rounded-xl bg-primary/15 text-primary shadow-2xs">
                   <Zap className="w-5 h-5 fill-marsala/20" />
                 </div>
                 <div>
@@ -346,12 +346,12 @@ const StatsPanel = () => {
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-marsala/10 text-marsala">
+                <div className="p-2 rounded-xl bg-primary/10 text-primary">
                   <Target className="w-4 h-4" />
                 </div>
                 <h3 className="font-display font-bold text-foreground">Meta {goal.year}</h3>
               </div>
-              <span className="text-sm font-bold font-numeric text-marsala">{goalProgress}%</span>
+              <span className="text-sm font-bold font-numeric text-primary">{goalProgress}%</span>
             </div>
 
             <div className="w-full h-3 bg-secondary rounded-full overflow-hidden mb-3">
@@ -359,7 +359,7 @@ const StatsPanel = () => {
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min(goalProgress, 100)}%` }}
                 transition={{ duration: 1, delay: 0.4, ease: "easeOut" }}
-                className="h-full gradient-marsala rounded-full"
+                className="h-full bg-primary rounded-full"
               />
             </div>
 

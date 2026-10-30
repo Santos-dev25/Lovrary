@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useBooks } from "@/context/BooksContext";
-import { Download, Image, Star, Quote, FileText, Loader2, Sparkles } from "lucide-react";
+import { Download, Image, Star, Quote, FileText, Loader2, Sparkles, Database, FileSpreadsheet, Copy } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { toPng } from "html-to-image";
@@ -8,13 +8,12 @@ import RatingStars from "@/components/RatingStars";
 
 /**
  * Converte URLs externas de imagens em Base64 Data URL local
- * contornando restrições de CORS de APIs como Google Books e Open Library.
+ * contornando restricoes de CORS de APIs como Google Books e Open Library.
  */
 const convertToDataUrl = async (src: string): Promise<string> => {
   if (!src) return "";
   if (src.startsWith("data:")) return src;
 
-  // 1. Tentativa com fetch direto CORS
   try {
     const res = await fetch(src, { mode: "cors" });
     if (res.ok) {
@@ -27,7 +26,6 @@ const convertToDataUrl = async (src: string): Promise<string> => {
     }
   } catch {}
 
-  // 2. Tentativa com Image element em memória
   try {
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const img = new window.Image();
@@ -43,7 +41,7 @@ const convertToDataUrl = async (src: string): Promise<string> => {
             resolve(canvas.toDataURL("image/png"));
             return;
           }
-          reject(new Error("Canvas context indisponível"));
+          reject(new Error("Canvas context indisponivel"));
         } catch (err) {
           reject(err);
         }
@@ -54,7 +52,6 @@ const convertToDataUrl = async (src: string): Promise<string> => {
     if (dataUrl) return dataUrl;
   } catch {}
 
-  // 3. Fallback de alta resiliência via proxy CDN de imagens gratuito com CORS liberado (weserv.nl)
   try {
     const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(src)}&default=1`;
     const res = await fetch(proxyUrl);
@@ -82,10 +79,19 @@ const ExportPage = () => {
   const [isExporting, setIsExporting] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const reviewedBooks = books.filter(b => b.review || (b.notes && b.notes.length > 0));
+  const reviewedBooks = useMemo(
+    () => books.filter(b => b.review || (b.notes && b.notes.length > 0) || b.rating > 0),
+    [books]
+  );
+
+  useEffect(() => {
+    if (!selectedBookId && reviewedBooks.length > 0) {
+      setSelectedBookId(reviewedBooks[0].id);
+    }
+  }, [reviewedBooks, selectedBookId]);
+
   const selectedBook = books.find(b => b.id === selectedBookId);
 
-  // Converte a capa para DataURL assim que o livro é selecionado
   useEffect(() => {
     let cancelled = false;
     if (!selectedBook?.cover) {
@@ -110,23 +116,81 @@ const ExportPage = () => {
     };
   }, [selectedBook?.cover]);
 
-  const handleCopyText = () => {
-    if (!selectedBook) return;
-    let text = `📚 ${selectedBook.title}\n`;
-    text += `✍️ ${selectedBook.author}\n`;
-    text += `⭐ ${selectedBook.rating}/5\n\n`;
-    if (selectedBook.review) text += `📝 Resenha:\n${selectedBook.review}\n\n`;
+  const totalNotesCount = useMemo(
+    () => books.reduce((sum, b) => sum + (b.notes?.length || 0), 0),
+    [books]
+  );
+
+  const totalQuotesCount = useMemo(
+    () => books.reduce((sum, b) => sum + (b.quotes?.length || 0), 0),
+    [books]
+  );
+
+  const handleExportJSON = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(books, null, 2));
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `lovrary-backup-${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    toast.success("Backup completo em JSON exportado com sucesso! 📦");
+  };
+
+  const handleExportCSV = () => {
+    const headers = ["ID", "Título", "Autor", "Categoria", "Status", "Posse", "Páginas Totais", "Página Atual", "Avaliação", "Data Conclusão"];
+    const rows = books.map(b => [
+      `"${b.id}"`,
+      `"${(b.title || "").replace(/"/g, '""')}"`,
+      `"${(b.author || "").replace(/"/g, '""')}"`,
+      `"${(b.category || "").replace(/"/g, '""')}"`,
+      `"${b.status}"`,
+      `"${b.ownership}"`,
+      b.totalPages || 0,
+      b.currentPage || 0,
+      b.rating || 0,
+      `"${b.dateFinished || ""}"`
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\r\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `lovrary-acervo-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    toast.success("Planilha CSV do acervo gerada com sucesso! 📊");
+  };
+
+  const formattedTextContent = useMemo(() => {
+    if (!selectedBook) return "";
+    const lines: string[] = [];
+    lines.push(`📚 ${selectedBook.title}`);
+    lines.push(`✍️ ${selectedBook.author}`);
+    lines.push(`⭐ ${selectedBook.rating}/5`);
+    lines.push("");
+    if (selectedBook.review) {
+      lines.push("📝 Resenha:");
+      lines.push(selectedBook.review);
+      lines.push("");
+    }
     if (selectedBook.quotes && selectedBook.quotes.length > 0) {
-      text += `💬 Citações Favoritas:\n`;
-      selectedBook.quotes.forEach(q => text += `"${q}"\n`);
-      text += "\n";
+      lines.push("💬 Citações:");
+      selectedBook.quotes.forEach(q => lines.push(`"${q}"`));
+      lines.push("");
     }
     if (selectedBook.notes && selectedBook.notes.length > 0) {
-      text += `📖 Journal:\n`;
-      selectedBook.notes.forEach(n => text += `${n.date} às ${n.time} — ${n.chapter}: ${n.text}\n`);
+      lines.push("📖 Journal:");
+      selectedBook.notes.forEach(n => lines.push(`${n.date} às ${n.time} — ${n.chapter}: ${n.text}`));
+      lines.push("");
     }
-    text += `\n— Lovrary 📖`;
-    navigator.clipboard.writeText(text);
+    lines.push("— Lovrary • Biblioteca Pessoal 📖");
+    return lines.join("\n");
+  }, [selectedBook]);
+
+  const handleCopyText = () => {
+    if (!formattedTextContent) return;
+    navigator.clipboard.writeText(formattedTextContent);
     toast.success("Texto copiado para a área de transferência!");
   };
 
@@ -136,14 +200,12 @@ const ExportPage = () => {
     const toastId = toast.loading("Renderizando card em alta definição...");
 
     try {
-      // Garante que a capa está pronta em Data URL para evitar CORS
       let activeCover = cardCoverUrl;
       if (!activeCover && selectedBook.cover) {
         activeCover = await convertToDataUrl(selectedBook.cover);
         setCardCoverUrl(activeCover);
       }
 
-      // Pequeno delay para garantir repaint do DOM
       await new Promise((r) => setTimeout(r, 150));
 
       const node = cardRef.current;
@@ -172,161 +234,245 @@ const ExportPage = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <h2 className="text-2xl font-display font-bold text-foreground">Preservar & Compartilhar Acervo</h2>
-      <p className="text-sm text-muted-foreground">Gere um card visual memorável ou copie o texto da resenha e diário para compartilhar.</p>
-
-      {/* Book selector */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-        {reviewedBooks.map(book => (
-          <button
-            key={book.id}
-            onClick={() => setSelectedBookId(book.id)}
-            className={`flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
-              selectedBookId === book.id
-                ? "border-marsala bg-secondary shadow-sm"
-                : "border-border bg-card hover:border-marsala/30"
-            }`}
-          >
-            <img src={book.cover} alt={book.title} className="w-10 h-14 object-cover rounded-lg shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-foreground truncate">{book.title}</p>
-              <p className="text-[10px] text-muted-foreground truncate">{book.author}</p>
-            </div>
-          </button>
-        ))}
+    <div className="space-y-6 sm:space-y-8 animate-fade-in">
+      <div>
+        <h2 className="text-2xl sm:text-3xl font-serif font-bold text-foreground tracking-tight">Preservar & Compartilhar Acervo</h2>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 font-sans">
+          Seus dados pertencem a você. Exporte seus registros em formatos universais ou crie cartões visuais para compartilhar.
+        </p>
       </div>
 
-      {reviewedBooks.length === 0 && (
-        <div className="text-center py-12">
-          <FileText className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">Nenhum livro com resenha ou diário para exportar.</p>
-        </div>
-      )}
-
-      {selectedBook && (
-        <>
-          {/* Format selector */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setFormat("card")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                format === "card" ? "gradient-marsala text-primary-foreground" : "bg-secondary text-muted-foreground"
-              }`}
-            >
-              <Image className="w-4 h-4" /> Card Visual
-            </button>
-            <button
-              onClick={() => setFormat("text")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                format === "text" ? "gradient-marsala text-primary-foreground" : "bg-secondary text-muted-foreground"
-              }`}
-            >
-              <FileText className="w-4 h-4" /> Texto
-            </button>
+      {/* 1. Backup & Data Sovereign Export Card */}
+      <div className="bg-card rounded-2xl border border-border p-5 sm:p-7 shadow-card space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+            <Database className="w-5 h-5" />
           </div>
+          <div>
+            <h3 className="font-serif font-bold text-base sm:text-lg text-foreground">
+              Preservação & Soberania dos Dados
+            </h3>
+            <p className="text-xs text-muted-foreground font-sans">
+              Faça o download completo dos seus livros, notas do diário e citações para armazenamento seguro e portabilidade.
+            </p>
+          </div>
+        </div>
 
-          {format === "card" ? (
-            <div className="space-y-4">
-              {/* Preview card com dimensões fixas estáveis sem cortes */}
-              <div
-                ref={cardRef}
-                className="w-full max-w-[420px] mx-auto rounded-2xl overflow-hidden shadow-2xl relative text-left"
-                style={{
-                  background: "linear-gradient(145deg, #62222c 0%, #3e1219 100%)",
-                  boxSizing: "border-box",
-                }}
+        <div className="grid grid-cols-3 gap-3 py-2 border-y border-border/60 text-center font-numeric">
+          <div>
+            <p className="text-xl sm:text-2xl font-bold text-foreground">{books.length}</p>
+            <p className="text-[11px] text-muted-foreground font-sans">Livros no Total</p>
+          </div>
+          <div>
+            <p className="text-xl sm:text-2xl font-bold text-foreground">{totalNotesCount}</p>
+            <p className="text-[11px] text-muted-foreground font-sans">Entradas no Journal</p>
+          </div>
+          <div>
+            <p className="text-xl sm:text-2xl font-bold text-foreground">{totalQuotesCount}</p>
+            <p className="text-[11px] text-muted-foreground font-sans">Citações Salvas</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 pt-1">
+          <button
+            onClick={handleExportJSON}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border text-xs sm:text-sm font-semibold transition-colors shadow-2xs"
+          >
+            <Download className="w-4 h-4 text-primary" />
+            <span>Exportar em JSON (Completo)</span>
+          </button>
+          <button
+            onClick={handleExportCSV}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border text-xs sm:text-sm font-semibold transition-colors shadow-2xs"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-success" />
+            <span>Exportar em CSV (Planilha)</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Social Media Visual Card Studio */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-gold" />
+          <h3 className="font-serif font-bold text-lg sm:text-xl text-foreground">
+            Estúdio de Cartões Literários
+          </h3>
+        </div>
+
+        {/* Book Selector Pills/Grid */}
+        {reviewedBooks.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {reviewedBooks.map(book => (
+              <button
+                key={book.id}
+                onClick={() => setSelectedBookId(book.id)}
+                className={`flex items-center gap-2.5 p-2.5 rounded-2xl border transition-all text-left group ${
+                  selectedBookId === book.id
+                    ? "border-primary bg-primary/5 shadow-xs ring-1 ring-primary/30"
+                    : "border-border bg-card hover:border-primary/40 hover:bg-secondary/40"
+                }`}
               >
-                <div className="p-6 text-center">
-                  <div className="relative inline-block mx-auto mb-4">
-                    {loadingCover ? (
-                      <div className="w-28 h-40 bg-black/20 rounded-xl flex items-center justify-center">
-                        <Loader2 className="w-6 h-6 text-white/60 animate-spin" />
+                <div className="w-9 aspect-[2/3] rounded-md overflow-hidden shrink-0 shadow-2xs border border-border/40 bg-secondary/30">
+                  <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
+                </div>
+                <div className="min-w-0 pr-1">
+                  <p translate="no" className="notranslate text-xs font-semibold text-foreground truncate" title={book.title}>
+                    {book.title}
+                  </p>
+                  <p translate="no" className="notranslate text-[10px] text-muted-foreground truncate">
+                    {book.author || "Autor desconhecido"}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-10 bg-card rounded-2xl border border-dashed border-border p-6 space-y-2">
+            <FileText className="w-8 h-8 text-muted-foreground mx-auto opacity-50" />
+            <p className="text-xs text-muted-foreground font-sans">
+              Nenhum livro com resenha, nota ou avaliação para gerar cartões sociais.
+            </p>
+          </div>
+        )}
+
+        {selectedBook && (
+          <div className="space-y-4 pt-2">
+            {/* Format selector tabs */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setFormat("card")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  format === "card"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"
+                }`}
+              >
+                <Image className="w-4 h-4" /> Card Visual (PNG)
+              </button>
+              <button
+                onClick={() => setFormat("text")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  format === "text"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"
+                }`}
+              >
+                <Copy className="w-4 h-4" /> Texto Formatado
+              </button>
+            </div>
+
+            {format === "card" ? (
+              <div className="space-y-4">
+                {/* Visual Card Canvas */}
+                <div
+                  ref={cardRef}
+                  className="w-full max-w-[420px] mx-auto rounded-3xl overflow-hidden shadow-2xl relative text-left border border-white/10"
+                  style={{
+                    background: "linear-gradient(145deg, #62222c 0%, #3e1219 100%)",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <div className="p-6 text-center">
+                    <div className="relative inline-block mx-auto mb-4">
+                      {loadingCover ? (
+                        <div className="w-28 h-40 bg-black/20 rounded-xl flex items-center justify-center">
+                          <Loader2 className="w-6 h-6 text-white/60 animate-spin" />
+                        </div>
+                      ) : (
+                        <img
+                          src={cardCoverUrl || selectedBook.cover}
+                          alt={selectedBook.title}
+                          crossOrigin="anonymous"
+                          className="w-28 h-40 object-cover rounded-xl shadow-2xl mx-auto border border-white/15"
+                        />
+                      )}
+                    </div>
+                    <h3
+                      translate="no"
+                      className="notranslate font-serif font-bold text-xl text-white leading-tight px-2"
+                    >
+                      {selectedBook.title}
+                    </h3>
+                    <p translate="no" className="notranslate text-sm text-white/80 mt-1 font-sans">
+                      {selectedBook.author}
+                    </p>
+                    {selectedBook.rating > 0 && (
+                      <div className="flex justify-center mt-3">
+                        <RatingStars value={selectedBook.rating} size="md" showValue readOnly />
                       </div>
-                    ) : (
-                      <img
-                        src={cardCoverUrl || selectedBook.cover}
-                        alt={selectedBook.title}
-                        crossOrigin="anonymous"
-                        className="w-28 h-40 object-cover rounded-xl shadow-2xl mx-auto border border-white/10"
-                      />
                     )}
                   </div>
-                  <h3 className="font-display font-bold text-xl text-white leading-tight px-2">{selectedBook.title}</h3>
-                  <p className="text-sm text-white/80 mt-1">{selectedBook.author}</p>
-                  {selectedBook.rating > 0 && (
-                    <div className="flex justify-center mt-3">
-                      <RatingStars value={selectedBook.rating} size="md" showValue readOnly />
+
+                  {selectedBook.review && (
+                    <div className="bg-black/25 backdrop-blur-sm px-6 py-4 border-t border-b border-white/10">
+                      <p
+                        translate="no"
+                        className="notranslate text-xs text-white/95 font-serif italic leading-relaxed whitespace-pre-wrap"
+                      >
+                        "{selectedBook.review}"
+                      </p>
                     </div>
                   )}
-                </div>
 
-                {selectedBook.review && (
-                  <div className="bg-black/25 backdrop-blur-sm px-6 py-4 border-t border-b border-white/10">
-                    <p className="text-xs text-white/95 italic leading-relaxed whitespace-pre-wrap">"{selectedBook.review}"</p>
-                  </div>
-                )}
-
-                {selectedBook.quotes && selectedBook.quotes.length > 0 && (
-                  <div className="px-6 py-3 bg-black/15">
-                    <p className="text-[10px] text-white/70 flex items-center gap-1 mb-1 font-semibold uppercase tracking-wider">
-                      <Quote className="w-3 h-3 text-gold" /> Citação favorita
-                    </p>
-                    <p className="text-xs text-white/90 italic leading-relaxed">"{selectedBook.quotes[0]}"</p>
-                  </div>
-                )}
-
-                <div className="px-6 py-3.5 flex items-center justify-between border-t border-white/10 bg-black/30">
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-gold" />
-                    <span className="text-xs font-display font-bold tracking-wider text-white">Lovrary</span>
-                  </div>
-                  {selectedBook.vibes.length > 0 && (
-                    <div className="flex gap-1.5">
-                      {selectedBook.vibes.slice(0, 2).map(v => (
-                        <span key={v} className="text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-white/20 text-white/90">{v}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <button
-                onClick={handleDownloadCard}
-                disabled={isExporting || loadingCover}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl gradient-marsala text-primary-foreground text-sm font-semibold mx-auto shadow-card hover:shadow-card-hover transition-all disabled:opacity-50"
-              >
-                {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                <span>Baixar Card (PNG)</span>
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="bg-card rounded-xl border border-border p-5">
-                <pre className="text-xs text-foreground whitespace-pre-wrap font-body leading-relaxed">
-                  📚 {selectedBook.title}{"\n"}
-                  ✍️ {selectedBook.author}{"\n"}
-                  ⭐ {selectedBook.rating}/5{"\n\n"}
-                  {selectedBook.review && `📝 Resenha:\n${selectedBook.review}\n\n`}
                   {selectedBook.quotes && selectedBook.quotes.length > 0 && (
-                    <>💬 Citações:{"\n"}{selectedBook.quotes.map(q => `"${q}"`).join("\n")}{"\n\n"}</>
+                    <div className="px-6 py-3 bg-black/15">
+                      <p className="text-[10px] text-white/70 flex items-center gap-1 mb-1 font-semibold uppercase tracking-wider font-sans">
+                        <Quote className="w-3 h-3 text-gold" /> Citação marcante
+                      </p>
+                      <p
+                        translate="no"
+                        className="notranslate text-xs text-white/90 font-serif italic leading-relaxed"
+                      >
+                        "{selectedBook.quotes[0]}"
+                      </p>
+                    </div>
                   )}
-                  {selectedBook.notes && selectedBook.notes.length > 0 && (
-                    <>📖 Journal:{"\n"}{selectedBook.notes.map(n => `${n.date} às ${n.time} — ${n.chapter}: ${n.text}`).join("\n")}</>
-                  )}
-                  {"\n\n"}— Lovrary 📖
-                </pre>
+
+                  <div className="px-6 py-3.5 flex items-center justify-between border-t border-white/10 bg-black/30">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-gold" />
+                      <span className="text-xs font-serif font-bold tracking-wider text-white">Lovrary</span>
+                    </div>
+                    {selectedBook.vibes && selectedBook.vibes.length > 0 && (
+                      <div className="flex gap-1.5">
+                        {selectedBook.vibes.slice(0, 2).map(v => (
+                          <span key={v} className="text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-white/20 text-white/90">
+                            {v}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleDownloadCard}
+                  disabled={isExporting || loadingCover}
+                  className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold mx-auto shadow-card hover:bg-primary/90 transition-all disabled:opacity-50"
+                >
+                  {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  <span>Baixar Card Social (PNG)</span>
+                </button>
               </div>
-              <button
-                onClick={handleCopyText}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg gradient-marsala text-primary-foreground text-sm font-medium mx-auto"
-              >
-                <Download className="w-4 h-4" /> Copiar Texto
-              </button>
-            </div>
-          )}
-        </>
-      )}
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-card rounded-2xl border border-border p-5 shadow-xs">
+                  <pre className="text-xs text-foreground whitespace-pre-wrap font-sans leading-relaxed">
+                    {formattedTextContent}
+                  </pre>
+                </div>
+                <button
+                  onClick={handleCopyText}
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs sm:text-sm font-semibold mx-auto hover:bg-primary/90 transition-opacity shadow-xs"
+                >
+                  <Copy className="w-4 h-4" /> Copiar Texto
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
