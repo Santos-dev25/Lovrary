@@ -276,14 +276,14 @@ const ExportPage = () => {
         <div className="flex flex-col sm:flex-row gap-3 pt-1">
           <button
             onClick={handleExportJSON}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border text-xs sm:text-sm font-semibold transition-colors shadow-2xs"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border text-xs sm:text-sm font-semibold transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Download className="w-4 h-4 text-primary" />
             <span>Exportar em JSON (Completo)</span>
           </button>
           <button
             onClick={handleExportCSV}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border text-xs sm:text-sm font-semibold transition-colors shadow-2xs"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border text-xs sm:text-sm font-semibold transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <FileSpreadsheet className="w-4 h-4 text-success" />
             <span>Exportar em CSV (Planilha)</span>
@@ -307,7 +307,7 @@ const ExportPage = () => {
               <button
                 key={book.id}
                 onClick={() => setSelectedBookId(book.id)}
-                className={`flex items-center gap-2.5 p-2.5 rounded-2xl border transition-all text-left group ${
+                className={`flex items-center gap-2.5 p-2.5 rounded-2xl border transition-all text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   selectedBookId === book.id
                     ? "border-primary bg-primary/5 shadow-xs ring-1 ring-primary/30"
                     : "border-border bg-card hover:border-primary/40 hover:bg-secondary/40"
@@ -342,7 +342,7 @@ const ExportPage = () => {
             <div className="flex gap-2">
               <button
                 onClick={() => setFormat("card")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   format === "card"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"
@@ -352,7 +352,7 @@ const ExportPage = () => {
               </button>
               <button
                 onClick={() => setFormat("text")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   format === "text"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"

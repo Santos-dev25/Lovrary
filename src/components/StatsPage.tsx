@@ -122,7 +122,7 @@ const StatsPage = () => {
               <button
                 key={yr}
                 onClick={() => setYearFilter(yr)}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all ${
+                className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   yearFilter === yr
                     ? "bg-card text-foreground shadow-xs font-bold"
                     : "text-muted-foreground hover:text-foreground"
@@ -142,7 +142,7 @@ const StatsPage = () => {
           <button
             key={cat}
             onClick={() => setCategoryFilter(cat)}
-            className={`whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
+            className={`whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               categoryFilter === cat
                 ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                 : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"

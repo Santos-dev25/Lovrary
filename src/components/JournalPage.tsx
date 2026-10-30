@@ -98,7 +98,7 @@ const JournalPage = () => {
           <button
             key={book.id}
             onClick={() => setActiveBookId(book.id)}
-            className={`flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all shrink-0 text-left ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all shrink-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               activeBookId === book.id
                 ? "border-primary bg-primary/5 shadow-xs ring-1 ring-primary/20"
                 : "border-border bg-card hover:border-primary/40 hover:bg-secondary/40"
@@ -127,9 +127,18 @@ const JournalPage = () => {
             <div className="bg-card rounded-2xl border border-border p-5 sm:p-6 shadow-card space-y-4">
               <div className="flex gap-4">
                 <div
-                  className="w-20 aspect-[2/3] rounded-xl overflow-hidden shrink-0 shadow-xs border border-border/40 cursor-pointer bg-secondary/30 group"
+                  tabIndex={0}
+                  role="button"
                   onClick={() => setSelectedBook(activeBook)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedBook(activeBook);
+                    }
+                  }}
                   title="Ver detalhes da obra"
+                  aria-label={`Ver detalhes de ${activeBook.title}`}
+                  className="w-20 aspect-[2/3] rounded-xl overflow-hidden shrink-0 shadow-xs border border-border/40 cursor-pointer bg-secondary/30 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <img
                     src={activeBook.cover}

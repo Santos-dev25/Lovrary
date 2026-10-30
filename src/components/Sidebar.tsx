@@ -104,9 +104,9 @@ const Sidebar = ({
         className={`fixed left-0 top-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col transition-[width,transform] duration-200 ease-in-out z-50
           ${mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"} md:translate-x-0
           ${collapsed ? "md:w-[72px]" : "md:w-64"} w-[280px] max-w-[85vw]`}
-        role="dialog"
+        role={mobileOpen ? "dialog" : undefined}
         aria-modal={mobileOpen ? "true" : undefined}
-        aria-label="Navegação da Biblioteca"
+        aria-label="Navegação principal"
       >
         {/* Topo com Logo e Identidade Editorial */}
         <div className="flex items-center gap-3 px-4 py-4.5 border-b border-sidebar-border shrink-0">
@@ -163,6 +163,7 @@ const Sidebar = ({
                 <li key={item.id}>
                   <button
                     onClick={() => handleNav(item.id)}
+                    aria-current={isActive ? "page" : undefined}
                     className={`w-full min-h-[40px] flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring ${
                       isActive
                         ? "bg-sidebar-accent text-sidebar-primary font-semibold border-l-2 border-sidebar-primary shadow-xs"

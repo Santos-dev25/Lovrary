@@ -25,8 +25,8 @@ export const LovraryLogo: React.FC<LovraryLogoProps> = ({
       >
         <defs>
           <linearGradient id="lovrary-grad-primary" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="hsl(var(--marsala))" />
-            <stop offset="100%" stopColor="hsl(var(--marsala-dark, 348 55% 22%))" />
+            <stop offset="0%" stopColor="hsl(var(--primary))" />
+            <stop offset="100%" stopColor="hsl(var(--primary))" />
           </linearGradient>
           <linearGradient id="lovrary-grad-gold" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="hsl(var(--gold))" />

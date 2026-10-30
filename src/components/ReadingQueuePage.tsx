@@ -62,9 +62,18 @@ const ReadingQueuePage = () => {
 
                 {/* 2:3 Cover thumbnail */}
                 <div
-                  className="w-11 sm:w-12 aspect-[2/3] rounded-lg overflow-hidden shrink-0 shadow-xs border border-border/40 cursor-pointer bg-secondary/30"
+                  tabIndex={0}
+                  role="button"
                   onClick={() => setSelectedBook(book)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedBook(book);
+                    }
+                  }}
                   title={`Ver detalhes de ${book.title}`}
+                  aria-label={`Ver detalhes de ${book.title}`}
+                  className="w-11 sm:w-12 aspect-[2/3] rounded-lg overflow-hidden shrink-0 shadow-xs border border-border/40 cursor-pointer bg-secondary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <img
                     src={book.cover}
@@ -98,7 +107,7 @@ const ReadingQueuePage = () => {
                   <button
                     onClick={() => index > 0 && reorderQueue(index, index - 1)}
                     disabled={index === 0}
-                    className="min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-xl hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors disabled:opacity-25"
+                    className="min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-xl hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors disabled:opacity-25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={`Mover "${book.title}" para cima na fila`}
                     title="Mover para cima"
                   >
@@ -108,7 +117,7 @@ const ReadingQueuePage = () => {
                   <button
                     onClick={() => index < queueBooks.length - 1 && reorderQueue(index, index + 1)}
                     disabled={index === queueBooks.length - 1}
-                    className="min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-xl hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors disabled:opacity-25"
+                    className="min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-xl hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors disabled:opacity-25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={`Mover "${book.title}" para baixo na fila`}
                     title="Mover para baixo"
                   >
@@ -117,7 +126,7 @@ const ReadingQueuePage = () => {
 
                   <button
                     onClick={() => handleStartReading(book.id, book.title)}
-                    className="min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-xl bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground transition-all"
+                    className="min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-xl bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={`Começar a ler "${book.title}"`}
                     title="Começar a ler agora"
                   >
@@ -126,7 +135,7 @@ const ReadingQueuePage = () => {
 
                   <button
                     onClick={() => handleRemove(book.id, book.title)}
-                    className="min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    className="min-w-[36px] min-h-[36px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={`Remover "${book.title}" da fila`}
                     title="Remover da fila"
                   >

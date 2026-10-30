@@ -226,7 +226,7 @@ const Index = () => {
                 <button
                   key={pill.id}
                   onClick={() => setStatusFilter(pill.id as any)}
-                  className={`text-xs px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-all border ${
+                  className={`text-xs px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                     statusFilter === pill.id
                       ? "bg-primary text-primary-foreground border-transparent shadow-xs font-semibold"
                       : "bg-card text-muted-foreground border-border hover:text-foreground hover:bg-secondary"
@@ -245,7 +245,7 @@ const Index = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setGroupByAuthor(false)}
-                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all ${
+                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                     !groupByAuthor
                       ? "bg-primary text-primary-foreground border-transparent shadow-xs"
                       : "bg-card text-muted-foreground border-border hover:text-foreground"
@@ -255,7 +255,7 @@ const Index = () => {
                 </button>
                 <button
                   onClick={() => setGroupByAuthor(true)}
-                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all ${
+                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                     groupByAuthor
                       ? "bg-primary text-primary-foreground border-transparent shadow-xs"
                       : "bg-card text-muted-foreground border-border hover:text-foreground"
@@ -273,7 +273,7 @@ const Index = () => {
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as any)}
-                    className="text-xs font-semibold bg-transparent text-foreground focus:outline-none cursor-pointer pr-1"
+                    aria-label="Ordenar livros por" className="text-xs font-semibold bg-transparent text-foreground focus:outline-none cursor-pointer pr-1"
                   >
                     <option value="recent" className="bg-card text-foreground">Últimas Adições</option>
                     <option value="rating-desc" className="bg-card text-foreground">★ Melhor Avaliados</option>
@@ -292,7 +292,7 @@ const Index = () => {
                       setSearch("");
                       setSortBy("recent");
                     }}
-                    className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-semibold min-h-[36px] px-3 py-1.5 rounded-xl hover:bg-secondary transition-colors"
+                    className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-semibold min-h-[36px] px-3 py-1.5 rounded-xl hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     title="Restaurar todos os filtros"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />

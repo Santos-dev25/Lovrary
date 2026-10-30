@@ -155,7 +155,7 @@ export const ReaderSkillsSection = ({ compact = false, onExploreFull }: ReaderSk
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
           <button
             onClick={() => setActiveCategory("todas")}
-            className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+            className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               activeCategory === "todas"
                 ? "bg-primary text-primary-foreground shadow-xs"
                 : "bg-card border border-border text-muted-foreground hover:text-foreground"
@@ -167,7 +167,7 @@ export const ReaderSkillsSection = ({ compact = false, onExploreFull }: ReaderSk
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+              className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 activeCategory === cat
                   ? "bg-primary text-primary-foreground shadow-xs"
                   : "bg-card border border-border text-muted-foreground hover:text-foreground"
@@ -204,7 +204,7 @@ export const ReaderSkillsSection = ({ compact = false, onExploreFull }: ReaderSk
                 }
               }}
               onClick={() => setSelectedBadge(badge)}
-              className={`group relative bg-card rounded-2xl border p-4 sm:p-5 shadow-card hover:shadow-card-hover transition-all duration-300 cursor-pointer flex flex-col justify-between ${
+              className={`group relative bg-card rounded-2xl border p-4 sm:p-5 shadow-card hover:shadow-card-hover transition-all duration-300 cursor-pointer flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 tier.badgeBorder
               } ${tier.badgeGlow} ${!badge.unlocked ? "opacity-75 hover:opacity-100" : ""}`}
             >

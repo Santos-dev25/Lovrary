@@ -736,15 +736,18 @@ export const BookDetailModal = () => {
           </div>
 
           {/* Clean Editorial Navigation Tabs */}
-          <div className="flex border-b border-border bg-card/60 overflow-x-auto scrollbar-hide px-3 sm:px-6">
+          <div role="tablist" aria-label="Seções do livro" className="flex border-b border-border bg-card/60 overflow-x-auto scrollbar-hide px-3 sm:px-6">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
+                  role="tab"
+                  aria-selected={isActive}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`whitespace-nowrap flex items-center gap-2 py-3 px-3 sm:px-4 text-xs font-semibold border-b-2 transition-all ${
+                  className={`whitespace-nowrap flex items-center gap-2 py-3 px-3 sm:px-4 text-xs font-semibold border-b-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+
                     isActive
                       ? "border-primary text-primary font-bold bg-primary/5"
                       : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"

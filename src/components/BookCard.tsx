@@ -33,7 +33,10 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 };
 
 const BookCard = memo(({ book, onClick }: BookCardProps) => {
-  const status = statusConfig[book.status] || statusConfig["nao-lido"];
+  const isWishlist = book.ownership === "pretendo";
+  const status = isWishlist
+    ? { label: "Pretendo", className: "bg-gold/15 text-gold border border-gold/30 font-semibold" }
+    : (statusConfig[book.status] || statusConfig["nao-lido"]);
   const hasNotes = book.notes && book.notes.length > 0;
 
   return (
@@ -42,7 +45,16 @@ const BookCard = memo(({ book, onClick }: BookCardProps) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18, ease: "easeOut" }}
       onClick={onClick}
-      className="group relative bg-card rounded-xl border border-border shadow-card hover:shadow-card-hover transition-all duration-200 ease-out hover:-translate-y-1 will-change-transform cursor-pointer overflow-hidden flex flex-col justify-between"
+      tabIndex={0}
+      role="button"
+      aria-label={`Ver detalhes de ${book.title}, por ${book.author || "autor desconhecido"}`}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
+      className="group relative bg-card rounded-xl border border-border shadow-card hover:shadow-card-hover transition-all duration-200 ease-out hover:-translate-y-1 will-change-transform cursor-pointer overflow-hidden flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <div>
         {/* Book Cover Container: Protagonist 2:3 clean cover */}

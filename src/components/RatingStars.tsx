@@ -33,6 +33,8 @@ export const RatingStars: React.FC<RatingStarsProps> = ({
 
   return (
     <div
+      role="group"
+      aria-label={`Avaliação: ${displayValue.toFixed(1)} de 5 estrelas`}
       className={`inline-flex items-center ${container} ${className}`}
       onMouseLeave={() => isInteractive && setHoverValue(null)}
     >

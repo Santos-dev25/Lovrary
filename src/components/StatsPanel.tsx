@@ -217,12 +217,12 @@ const StatsPanel = () => {
           transition={{ delay: 0.22 }}
           className="relative overflow-hidden bg-card rounded-2xl border border-border p-5 shadow-card flex flex-col justify-between"
         >
-          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-marsala/10 blur-2xl pointer-events-none" />
+          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-primary/10 blur-2xl pointer-events-none" />
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2.5">
                 <div className="p-2.5 rounded-xl bg-primary/15 text-primary shadow-2xs">
-                  <Zap className="w-5 h-5 fill-marsala/20" />
+                  <Zap className="w-5 h-5 fill-primary/20" />
                 </div>
                 <div>
                   <h3 className="font-display font-bold text-foreground text-sm sm:text-base">Ritmo Médio</h3>
@@ -277,7 +277,7 @@ const StatsPanel = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <span className="inline-block w-2.5 h-2.5 rounded-full bg-marsala" />
+            <span className="inline-block w-2.5 h-2.5 rounded-full bg-primary" />
             <span>{readingPace.totalPagesInPeriod} páginas no período</span>
           </div>
         </div>
@@ -312,7 +312,7 @@ const StatsPanel = () => {
                 boxShadow: "var(--shadow-card)",
               }}
               labelStyle={{ fontWeight: 600, color: "hsl(var(--foreground))" }}
-              itemStyle={{ color: "hsl(var(--marsala))" }}
+              itemStyle={{ color: "hsl(var(--primary))" }}
               formatter={(value: number) => [`${value} página(s)`, "Lidas"]}
               labelFormatter={(_label, payload) => {
                 if (payload && payload.length > 0 && payload[0].payload) {
@@ -326,7 +326,7 @@ const StatsPanel = () => {
               {dailyHistory.map((entry, index) => (
                 <Cell
                   key={index}
-                  fill={entry.pages > 0 ? "hsl(var(--marsala))" : "hsl(var(--secondary) / 0.4)"}
+                  fill={entry.pages > 0 ? "hsl(var(--primary))" : "hsl(var(--secondary) / 0.4)"}
                 />
               ))}
             </Bar>
@@ -419,14 +419,14 @@ const StatsPanel = () => {
                   boxShadow: "var(--shadow-card)",
                 }}
                 labelStyle={{ fontWeight: 600, color: "hsl(var(--foreground))" }}
-                itemStyle={{ color: "hsl(var(--marsala))" }}
+                itemStyle={{ color: "hsl(var(--primary))" }}
                 formatter={(value: number) => [`${value} livro(s)`, "Lidos"]}
               />
               <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                 {monthlyStats.map((entry, index) => (
                   <Cell
                     key={index}
-                    fill={entry.count > 0 ? "hsl(var(--marsala))" : "hsl(var(--secondary))"}
+                    fill={entry.count > 0 ? "hsl(var(--primary))" : "hsl(var(--secondary))"}
                   />
                 ))}
               </Bar>
