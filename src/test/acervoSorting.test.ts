@@ -47,6 +47,11 @@ describe("Acervo Sorting & Filtering Logic", () => {
     },
   ];
 
+  it("should preserve catalog insertion order when sortBy is recent", () => {
+    const sorted = [...sampleBooks].sort((_a, _b) => 0);
+    expect(sorted.map((b) => b.id)).toEqual(["1", "2", "3"]);
+  });
+
   it("should sort books by rating descending", () => {
     const sorted = [...sampleBooks].sort((a, b) => (b.rating || 0) - (a.rating || 0));
     expect(sorted[0].rating).toBe(5);
@@ -67,6 +72,13 @@ describe("Acervo Sorting & Filtering Logic", () => {
     const sorted = [...sampleBooks].sort((a, b) => (b.totalPages || 0) - (a.totalPages || 0));
     expect(sorted[0].title).toBe("O Hobbit"); // 310
     expect(sorted[sorted.length - 1].title).toBe("A Metamorfose"); // 96
+  });
+
+  it("should sort books by total pages ascending (shortest first)", () => {
+    const sorted = [...sampleBooks].sort((a, b) => (a.totalPages || 0) - (b.totalPages || 0));
+    expect(sorted[0].title).toBe("A Metamorfose"); // 96
+    expect(sorted[1].title).toBe("Dom Casmurro"); // 256
+    expect(sorted[2].title).toBe("O Hobbit"); // 310
   });
 
   it("should sort books alphabetically by title (A-Z)", () => {

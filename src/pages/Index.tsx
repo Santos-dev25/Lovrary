@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Sidebar from "@/components/Sidebar";
 import ImmersiveReadingHero from "@/components/ImmersiveReadingHero";
 import ReaderSkillsSection from "@/components/ReaderSkillsSection";
@@ -32,6 +32,25 @@ const Index = () => {
   const [statusFilter, setStatusFilter] = useState<"todos" | "nao-lido" | "lendo" | "lido" | "emprestado" | "abandonado">("todos");
 
   const { books, setSelectedBook, selectedBook } = useBooks();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Atalho global de busca Ctrl+K / Cmd+K
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        if (activeTab !== "acervo") {
+          setActiveTab("acervo");
+        }
+        setTimeout(() => {
+          searchInputRef.current?.focus();
+          searchInputRef.current?.select();
+        }, 50);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeTab]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
@@ -155,34 +174,44 @@ const Index = () => {
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-xl sm:text-2xl font-display font-bold text-foreground">{title}</h2>
+          <h2 className="text-xl sm:text-2xl font-serif font-bold text-foreground">{title}</h2>
           <span className="text-xs sm:text-sm text-muted-foreground shrink-0">{filteredBooks.length} livro(s)</span>
         </div>
 
         {activeTab === "acervo" && (
           <div className="space-y-3.5">
-            {/* Search Input with Clear Button */}
+            {/* Search Input with Shortcut & Clear Button */}
             <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
               <input
+                ref={searchInputRef}
                 type="text"
                 placeholder="Buscar por título ou autor no seu acervo..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-10 py-2.5 bg-card border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-marsala/30 transition-all shadow-2xs"
+                className="w-full pl-10 pr-20 py-2.5 bg-card border border-input rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors shadow-2xs"
               />
-              {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-xl transition-colors"
-                  aria-label="Limpar busca"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                {search ? (
+                  <button
+                    onClick={() => {
+                      setSearch("");
+                      searchInputRef.current?.focus();
+                    }}
+                    className="min-w-[36px] min-h-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="Limpar busca"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <kbd className="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground bg-secondary/80 border border-border rounded-md font-mono select-none">
+                    <span className="text-xs">⌘</span>K
+                  </kbd>
+                )}
+              </div>
             </div>
 
-                        {/* Status Filter Pills */}
+            {/* Status Filter Pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
               {[
                 { id: "todos", label: "Todos", count: books.filter(b => b.ownership === "tenho").length },
@@ -197,7 +226,7 @@ const Index = () => {
                   onClick={() => setStatusFilter(pill.id as any)}
                   className={`text-xs px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-all border ${
                     statusFilter === pill.id
-                      ? "gradient-marsala text-primary-foreground border-transparent shadow-xs font-semibold"
+                      ? "bg-primary text-primary-foreground border-transparent shadow-xs font-semibold"
                       : "bg-card text-muted-foreground border-border hover:text-foreground hover:bg-secondary"
                   }`}
                 >
@@ -216,7 +245,7 @@ const Index = () => {
                   onClick={() => setGroupByAuthor(false)}
                   className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all ${
                     !groupByAuthor
-                      ? "gradient-marsala text-primary-foreground border-transparent shadow-xs"
+                      ? "bg-primary text-primary-foreground border-transparent shadow-xs"
                       : "bg-card text-muted-foreground border-border hover:text-foreground"
                   }`}
                 >
@@ -226,7 +255,7 @@ const Index = () => {
                   onClick={() => setGroupByAuthor(true)}
                   className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all ${
                     groupByAuthor
-                      ? "gradient-marsala text-primary-foreground border-transparent shadow-xs"
+                      ? "bg-primary text-primary-foreground border-transparent shadow-xs"
                       : "bg-card text-muted-foreground border-border hover:text-foreground"
                   }`}
                 >
@@ -237,7 +266,7 @@ const Index = () => {
               {/* Sorting & Filter Reset */}
               <div className="flex items-center gap-2.5 ml-auto">
                 <div className="flex items-center gap-1.5 bg-card border border-border px-3 py-1.5 rounded-xl shadow-2xs">
-                  <ArrowUpDown className="w-3.5 h-3.5 text-marsala" />
+                  <ArrowUpDown className="w-3.5 h-3.5 text-primary" />
                   <span className="text-[11px] font-semibold text-muted-foreground hidden sm:inline">Ordenar:</span>
                   <select
                     value={sortBy}
@@ -261,7 +290,7 @@ const Index = () => {
                       setSearch("");
                       setSortBy("recent");
                     }}
-                    className="flex items-center gap-1.5 text-xs text-marsala hover:text-marsala-light font-semibold min-h-[36px] px-3 py-1.5 rounded-xl hover:bg-secondary transition-colors"
+                    className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-semibold min-h-[36px] px-3 py-1.5 rounded-xl hover:bg-secondary transition-colors"
                     title="Restaurar todos os filtros"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />

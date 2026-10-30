@@ -174,7 +174,7 @@ const StatsPanel = () => {
                 </div>
               </div>
               {streak.readToday ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-success/15 text-success border border-success/30">
                   <Sparkles className="w-3 h-3" /> Lido hoje
                 </span>
               ) : (
@@ -272,7 +272,7 @@ const StatsPanel = () => {
               <Calendar className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-foreground text-sm sm:text-base">Constância nos Últimos 30 Dias</h3>
+              <h3 className="font-sans font-semibold text-foreground text-sm sm:text-base">Constância nos Últimos 30 Dias</h3>
               <p className="text-[11px] text-muted-foreground">Volume de páginas lidas por dia</p>
             </div>
           </div>

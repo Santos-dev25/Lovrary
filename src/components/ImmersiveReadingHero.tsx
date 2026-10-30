@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useBooks } from "@/context/BooksContext";
 import {
-  BookOpen, Sparkles, ArrowRight, Bookmark, Check, Plus, Feather, Flame
+  BookOpen, ArrowRight, Bookmark, Check, Feather, Flame
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -57,14 +57,14 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-card via-card to-secondary/50 border border-border p-6 sm:p-8 shadow-card"
+        className="relative overflow-hidden rounded-2xl bg-card border border-border p-6 sm:p-8 shadow-card"
       >
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-3 text-center md:text-left max-w-xl">
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-marsala">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
               <span>{greeting.icon}</span> {greeting.text}
             </span>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold text-foreground tracking-tight leading-tight">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-foreground tracking-tight leading-tight">
               Sua próxima grande história está à sua espera.
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
@@ -75,7 +75,7 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
               {nextInQueue ? (
                 <button
                   onClick={() => startReading(nextInQueue.id)}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl gradient-marsala text-primary-foreground text-xs font-bold shadow-sm hover:opacity-95 transition-opacity"
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 active:scale-[0.98] transition-all"
                 >
                   <span>Iniciar Próximo da Fila: {nextInQueue.title}</span>
                   <ArrowRight className="w-4 h-4" />
@@ -83,7 +83,7 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
               ) : (
                 <button
                   onClick={onExploreAcervo}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl gradient-marsala text-primary-foreground text-xs font-bold shadow-sm hover:opacity-95 transition-opacity"
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 active:scale-[0.98] transition-all"
                 >
                   <BookOpen className="w-4 h-4" />
                   <span>Explorar Meu Acervo</span>
@@ -93,8 +93,8 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
           </div>
 
           {/* Right Visual Element */}
-          <div className="shrink-0 w-32 h-44 sm:w-36 sm:h-52 rounded-2xl bg-secondary/80 border border-dashed border-border/80 flex flex-col items-center justify-center p-4 text-center">
-            <BookOpen className="w-8 h-8 text-marsala/60 mb-2" />
+          <div className="shrink-0 w-32 h-44 sm:w-36 sm:h-52 rounded-xl bg-secondary/60 border border-dashed border-border flex flex-col items-center justify-center p-4 text-center">
+            <BookOpen className="w-8 h-8 text-primary/50 mb-2" />
             <span className="text-[11px] font-medium text-muted-foreground">Estante silenciosa</span>
           </div>
         </div>
@@ -102,7 +102,7 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
     );
   }
 
-  // Livro ativo em leitura: Renderização Imersiva
+  // Livro ativo em leitura: Renderização Imersiva com Capa Protagonista
   const lastNote = activeBook.notes && activeBook.notes.length > 0
     ? activeBook.notes[activeBook.notes.length - 1]
     : null;
@@ -115,25 +115,18 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
     <motion.section
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-card via-card to-marsala/5 border border-border/90 p-5 sm:p-8 shadow-card"
+      className="relative overflow-hidden rounded-2xl bg-card border border-border p-5 sm:p-8 shadow-card"
     >
-      {/* Atmosphere glows */}
-      <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-gold/10 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-1/4 -mb-16 w-60 h-60 rounded-full bg-marsala/10 blur-3xl pointer-events-none" />
-
       <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
-        {/* Left Column: Physical Book Showcase (4 cols) */}
+        {/* Left Column: Protagonist Book Showcase (Capa em Proporção 2:3) */}
         <div className="lg:col-span-4 flex flex-col items-center justify-center">
           <div
             onClick={() => setSelectedBook(activeBook)}
             className="group relative cursor-pointer select-none"
             title="Clique para ver os detalhes do livro"
           >
-            {/* Ambient drop shadow under book */}
-            <div className="absolute -bottom-3 inset-x-3 h-6 bg-black/30 dark:bg-black/60 blur-md rounded-full" />
-
-            {/* Book Cover Container with Spine Effect & Gold Ribbon */}
-            <div className="relative w-40 sm:w-48 aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl book-spine-effect border border-white/20 transition-transform duration-500 group-hover:-translate-y-2 group-hover:rotate-1">
+            {/* Book Cover Container: 2:3 Clean, Natural Shadow, sem relevo falso */}
+            <div className="relative w-40 sm:w-48 aspect-[2/3] rounded-xl overflow-hidden shadow-card-hover border border-border/80 transition-transform duration-300 group-hover:-translate-y-1">
               <img
                 src={activeBook.cover}
                 alt={activeBook.title}
@@ -141,15 +134,10 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
                 loading="eager"
               />
 
-              {/* Bookmark Ribbon on top */}
-              <div className="absolute -top-1 right-5 w-5 h-10 bg-gold shadow-md flex flex-col items-center justify-end pb-1 clip-path-ribbon">
-                <div className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[8px] border-b-card" />
-              </div>
-
-              {/* Status Badge overlay */}
-              <div className="absolute bottom-2.5 left-2.5 right-2.5">
-                <div className="bg-card/90 backdrop-blur-md rounded-xl p-2 border border-border/60 shadow-xs flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-marsala uppercase tracking-wider">
+              {/* Status Badge overlay discreto na base */}
+              <div className="absolute bottom-2 inset-x-2">
+                <div className="bg-card/90 backdrop-blur-md rounded-lg px-2.5 py-1.5 border border-border/60 shadow-xs flex items-center justify-between">
+                  <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
                     Lendo Agora
                   </span>
                   <span className="text-xs font-numeric font-bold text-foreground">
@@ -166,11 +154,11 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
           {/* Header & Greeting */}
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-marsala">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
                 <span>{greeting.icon}</span> {greeting.text}
               </span>
               {activeBook.category && (
-                <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-secondary text-muted-foreground border border-border">
+                <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-secondary text-secondary-foreground border border-border">
                   {activeBook.category}
                 </span>
               )}
@@ -178,7 +166,7 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
 
             <h2
               onClick={() => setSelectedBook(activeBook)}
-              className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold text-foreground tracking-tight hover:text-marsala transition-colors cursor-pointer"
+              className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-foreground tracking-tight hover:text-primary transition-colors cursor-pointer"
             >
               {activeBook.title}
             </h2>
@@ -187,8 +175,8 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
             </p>
           </div>
 
-          {/* Reading Gauge / Progress Ruler */}
-          <div className="bg-background/80 backdrop-blur-xs rounded-2xl p-4 border border-border/80 shadow-xs space-y-2.5">
+          {/* Reading Progress Ruler */}
+          <div className="bg-background rounded-xl p-4 border border-border shadow-xs space-y-2.5">
             <div className="flex items-center justify-between text-xs sm:text-sm font-numeric">
               <div className="flex items-center gap-2">
                 <Flame className="w-4 h-4 text-gold fill-gold/20" />
@@ -201,17 +189,17 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
                   </span>
                 )}
               </div>
-              <span className="font-bold text-marsala font-numeric">
+              <span className="font-bold text-primary font-numeric">
                 {activeBook.progress || 0}% concluído
               </span>
             </div>
 
-            <div className="w-full h-3 bg-secondary rounded-full overflow-hidden p-0.5 border border-border/40">
+            <div className="w-full h-2.5 bg-secondary rounded-full overflow-hidden p-0.5 border border-border/40">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${activeBook.progress || 0}%` }}
-                transition={{ duration: 1, ease: "easeOut" }}
-                className="h-full gradient-marsala rounded-full"
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="h-full bg-primary rounded-full"
               />
             </div>
 
@@ -232,14 +220,14 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
                     value={pageInput}
                     onChange={e => setPageInput(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && handleSavePage()}
-                    className="w-16 px-2 py-0.5 text-xs bg-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-marsala"
+                    className="w-16 px-2 py-0.5 text-xs bg-card border border-input rounded-lg text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     autoFocus
                   />
                   <button
                     onClick={handleSavePage}
                     disabled={justSaved}
                     className={`p-1 rounded-md text-primary-foreground transition-all duration-300 ${
-                      justSaved ? "bg-emerald-600 scale-105" : "gradient-marsala hover:opacity-90"
+                      justSaved ? "bg-success scale-105" : "bg-primary hover:bg-primary/90"
                     }`}
                     title="Confirmar"
                   >
@@ -260,7 +248,7 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
                     setPageInput(String(activeBook.currentPage || ""));
                     setIsEditingPage(true);
                   }}
-                  className="text-marsala font-semibold hover:underline"
+                  className="text-primary font-medium hover:underline"
                 >
                   Atualizar página rápida
                 </button>
@@ -270,12 +258,12 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
 
           {/* Last Reflection / Journal Quote Highlight */}
           {(lastNote || lastQuote) && (
-            <div className="rounded-2xl bg-secondary/40 border border-border/80 p-3.5 sm:p-4 flex items-start gap-3">
-              <div className="p-1.5 rounded-lg bg-card text-marsala shrink-0 mt-0.5 shadow-2xs">
+            <div className="rounded-xl bg-secondary/50 border border-border p-3.5 sm:p-4 flex items-start gap-3">
+              <div className="p-1.5 rounded-lg bg-card text-primary shrink-0 mt-0.5 shadow-2xs">
                 {lastNote ? <Feather className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
               </div>
               <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block mb-0.5">
                   {lastNote ? `Última reflexão • ${lastNote.chapter || "Journal"}` : "Citação em destaque"}
                 </span>
                 <p className="text-xs font-serif italic text-foreground/90 line-clamp-2 leading-relaxed">
@@ -289,7 +277,7 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <button
               onClick={() => setSelectedBook(activeBook)}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl gradient-marsala text-primary-foreground text-xs font-bold shadow-sm hover:opacity-95 transition-opacity"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 active:scale-[0.98] transition-all"
             >
               <BookOpen className="w-4 h-4" />
               <span>Abrir Painel do Livro</span>
@@ -297,9 +285,9 @@ export const ImmersiveReadingHero = ({ onOpenJournal, onExploreAcervo }: Immersi
 
             <button
               onClick={onOpenJournal}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-card border border-border text-foreground hover:bg-secondary text-xs font-semibold shadow-xs transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80 text-xs font-medium shadow-xs transition-colors"
             >
-              <Feather className="w-4 h-4 text-marsala" />
+              <Feather className="w-4 h-4 text-primary" />
               <span>Escrever no Journal</span>
             </button>
           </div>

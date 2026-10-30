@@ -48,7 +48,7 @@ const RecentActivity = () => {
 
   return (
     <div className="space-y-4">
-      <h3 className="font-display font-bold text-lg text-foreground">Atividade Recente</h3>
+      <h3 className="font-sans font-semibold text-base sm:text-lg text-foreground">Atividade Recente</h3>
       {recentActivities.length === 0 ? (
         <div className="bg-card/60 rounded-2xl border border-dashed border-border p-6 text-center">
           <p className="text-xs font-medium text-muted-foreground">Nenhuma atividade registrada ainda.</p>
