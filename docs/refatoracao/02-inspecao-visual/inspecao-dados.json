@@ -1,0 +1,168 @@
+{
+  "consoleErrors": [
+    {
+      "url": "http://localhost:8080/",
+      "text": "Failed to load resource: the server responded with a status of 429 ()"
+    },
+    {
+      "url": "http://localhost:8080/rota-inexistente-teste",
+      "text": "404 Error: User attempted to access non-existent route: /rota-inexistente-teste"
+    },
+    {
+      "url": "http://localhost:8080/rota-inexistente-teste",
+      "text": "404 Error: User attempted to access non-existent route: /rota-inexistente-teste"
+    },
+    {
+      "url": "http://localhost:8080/",
+      "text": "[Mobile] Failed to load resource: the server responded with a status of 429 ()"
+    },
+    {
+      "url": "http://localhost:8080/rota-404-mobile",
+      "text": "[Mobile] 404 Error: User attempted to access non-existent route: /rota-404-mobile"
+    },
+    {
+      "url": "http://localhost:8080/rota-404-mobile",
+      "text": "[Mobile] 404 Error: User attempted to access non-existent route: /rota-404-mobile"
+    }
+  ],
+  "overflows": [],
+  "testedPages": [
+    {
+      "name": "Auth",
+      "url": "/auth",
+      "resolution": "1440x900"
+    },
+    {
+      "name": "Dashboard (Início)",
+      "url": "/ (tab: dashboard)",
+      "resolution": "1440x900"
+    },
+    {
+      "name": "Meu Acervo",
+      "url": "/ (tab: acervo)",
+      "resolution": "1440x900"
+    },
+    {
+      "name": "Lendo Agora",
+      "url": "/ (tab: lendo)",
+      "resolution": "1440x900"
+    },
+    {
+      "name": "Journal",
+      "url": "/ (tab: journal)",
+      "resolution": "1440x900"
+    },
+    {
+      "name": "Maestria & Skills",
+      "url": "/ (tab: skills)",
+      "resolution": "1440x900"
+    },
+    {
+      "name": "Lista de Desejos",
+      "url": "/ (tab: wishlist)",
+      "resolution": "1440x900"
+    },
+    {
+      "name": "Próxima Leitura",
+      "url": "/ (tab: fila)",
+      "resolution": "1440x900"
+    },
+    {
+      "name": "Registros de Leitura",
+      "url": "/ (tab: stats)",
+      "resolution": "1440x900"
+    },
+    {
+      "name": "Metas",
+      "url": "/ (tab: metas)",
+      "resolution": "1440x900"
+    },
+    {
+      "name": "Resenhas",
+      "url": "/ (tab: resenhas)",
+      "resolution": "1440x900"
+    },
+    {
+      "name": "Preservar Acervo",
+      "url": "/ (tab: exportar)",
+      "resolution": "1440x900"
+    },
+    {
+      "name": "NotFound (404)",
+      "url": "/rota-inexistente-teste",
+      "resolution": "1440x900"
+    },
+    {
+      "name": "Auth Mobile",
+      "url": "/auth",
+      "resolution": "390x844"
+    },
+    {
+      "name": "Dashboard Mobile",
+      "url": "/ (tab: dashboard)",
+      "resolution": "390x844"
+    },
+    {
+      "name": "Meu Acervo Mobile",
+      "url": "/ (tab: acervo)",
+      "resolution": "390x844"
+    },
+    {
+      "name": "Lendo Agora Mobile",
+      "url": "/ (tab)",
+      "resolution": "390x844"
+    },
+    {
+      "name": "Journal Mobile",
+      "url": "/ (tab)",
+      "resolution": "390x844"
+    },
+    {
+      "name": "Maestria & Skills Mobile",
+      "url": "/ (tab)",
+      "resolution": "390x844"
+    },
+    {
+      "name": "Próxima Leitura Mobile",
+      "url": "/ (tab)",
+      "resolution": "390x844"
+    },
+    {
+      "name": "Registros de Leitura Mobile",
+      "url": "/ (tab)",
+      "resolution": "390x844"
+    },
+    {
+      "name": "Metas Mobile",
+      "url": "/ (tab)",
+      "resolution": "390x844"
+    },
+    {
+      "name": "Resenhas Mobile",
+      "url": "/ (tab)",
+      "resolution": "390x844"
+    },
+    {
+      "name": "Preservar Acervo Mobile",
+      "url": "/ (tab)",
+      "resolution": "390x844"
+    },
+    {
+      "name": "NotFound Mobile",
+      "url": "/404",
+      "resolution": "390x844"
+    }
+  ],
+  "interactions": [
+    "Login com Modo Demonstração",
+    "Alternância para Modo Noturno",
+    "Abertura do AddBookModal",
+    "Abertura do BookDetailModal (Journal)",
+    "Busca textual com filtro em tempo real",
+    "Filtro por status (Lidos)",
+    "Agrupamento por Autor",
+    "Abertura da Gaveta Mobile (Drawer)",
+    "Abertura do BookDetailModal Mobile",
+    "Abertura do AddBookModal Mobile"
+  ]
+}
